@@ -1,0 +1,165 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1712000000000,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "id": 1,
+      "type": "gauge",
+      "title": "OEE (Facility)",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "fm-influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "orange", "value": 0.5 },
+              { "color": "yellow", "value": 0.6 },
+              { "color": "green", "value": 0.85 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "import \"math\"\nplanned = 8.0 * 3600.0\nops = from(bucket: \"${INFLUX_BUCKET}\") |> range(start: -8h) |> filter(fn: (r) => r._measurement == \"counters\" and r._field == \"total\") |> last() |> keep(columns: [\"_value\"]) |> findColumn(fn: (key) => true, column: \"_value\")\nfrom(bucket: \"${INFLUX_BUCKET}\")\n  |> range(start: -8h)\n  |> filter(fn: (r) => r._measurement == \"counters\")\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"good\", \"total\"])\n  |> last(column: \"total\")"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Availability (rolling 1h)",
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "fm-influxdb" },
+      "fieldConfig": {
+        "defaults": { "min": 0, "max": 1, "unit": "percentunit", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${INFLUX_BUCKET}\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"status\")\n  |> aggregateWindow(every: 1m, fn: count, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"state\"])"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Performance (cycle time vs ideal)",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "fm-influxdb" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "showLegend": true } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${INFLUX_BUCKET}\")\n  |> range(start: -4h)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r.metric == \"spindle_speed\" and r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)\n  |> group(columns: [\"machine\"])"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Quality (good / total ultima ora)",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "fm-influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 0.95 },
+            { "color": "green", "value": 0.99 }
+          ] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["last"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${INFLUX_BUCKET}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"counters\")\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with quality: float(v: r.good) / float(v: r.total) }))\n  |> keep(columns: [\"_time\", \"quality\"])\n  |> last(column: \"quality\")"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Feed allarmi in tempo reale",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 7 },
+      "datasource": { "type": "postgres", "uid": "fm-postgres" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fired_at AS \"Tempo\", facility_id || '/' || line_id || '/' || machine_id AS \"Macchina\", severity AS \"Severità\", metric AS \"Metrica\", value AS \"Valore\", message AS \"Messaggio\" FROM alerts WHERE status = 'open' ORDER BY fired_at DESC LIMIT 50"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "Pareto fermi macchina (ultime 24h)",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 7 },
+      "datasource": { "type": "postgres", "uid": "fm-postgres" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "orientation": "horizontal", "showValue": "always" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT reason_code AS \"Causa\", SUM(duration_sec) AS \"Durata_sec\" FROM downtimes WHERE started_at > NOW() - INTERVAL '24 hours' GROUP BY reason_code ORDER BY \"Durata_sec\" DESC LIMIT 10"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Velocità mandrino (RPM) — tutte le macchine",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "datasource": { "type": "influxdb", "uid": "fm-influxdb" },
+      "fieldConfig": { "defaults": { "unit": "rpm" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "showLegend": true } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${INFLUX_BUCKET}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r.metric == \"spindle_speed\" and r._field == \"value\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"machine\"])"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["factorymind", "oee", "industrial-iot"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+  "timezone": "Europe/Rome",
+  "title": "FactoryMind — Overview Produzione",
+  "uid": "factorymind-overview",
+  "version": 1,
+  "weekStart": "monday"
+}

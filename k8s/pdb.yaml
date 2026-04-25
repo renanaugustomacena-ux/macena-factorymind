@@ -1,0 +1,41 @@
+# ============================================================================
+# FactoryMind PodDisruptionBudget.
+#
+# Guarantees at least 1 backend replica remains available during voluntary
+# disruption events (node drain, cluster upgrade). Works in concert with
+# HPA (min 2 replicas) to keep the API plane live.
+# ============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: factorymind-backend
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: backend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: factorymind
+      app.kubernetes.io/component: backend
+---
+# Mosquitto PDB — at least one broker pod must remain up because device
+# reconnection is bounded by QoS 2 command delivery. If the broker is a
+# StatefulSet with replica = 1 (single-broker mode), the PDB is still
+# useful: it documents the intent and blocks accidental concurrent drain
+# in a scaled-out topology.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: factorymind-mosquitto
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: mosquitto
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: factorymind
+      app.kubernetes.io/component: mosquitto

@@ -1,0 +1,249 @@
+# ============================================================================
+# FactoryMind — Full-stack local development compose file.
+# Orchestrates: Node backend, React/Vite frontend, Mosquitto MQTT broker,
+# InfluxDB 2.x, PostgreSQL 16, Grafana, and the IoT simulator.
+# ============================================================================
+
+name: factorymind
+
+services:
+
+  # -------------------------------------------------------------------------
+  # PostgreSQL — metadata, RBAC, alert rules, shifts, audit log
+  # -------------------------------------------------------------------------
+  factorymind-postgres:
+    image: postgres:16-alpine
+    container_name: factorymind-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-factorymind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: ${POSTGRES_DB:-factorymind}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/src/db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-factorymind} -d ${POSTGRES_DB:-factorymind}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # InfluxDB 2.x — high-frequency time-series machine telemetry
+  # -------------------------------------------------------------------------
+  factorymind-influxdb:
+    image: influxdb:2.7-alpine
+    container_name: factorymind-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${DOCKER_INFLUXDB_INIT_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${DOCKER_INFLUXDB_INIT_PASSWORD:-change_me_influx_admin}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:-factorymind}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:-factory-telemetry}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-please-generate-long-random-token-and-set-here}
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # Eclipse Mosquitto — MQTT broker, TCP + WebSocket
+  # -------------------------------------------------------------------------
+  factorymind-mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: factorymind-mosquitto
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    ports:
+      - "1883:1883"   # MQTT over TCP
+      - "9001:9001"   # MQTT over WebSocket (frontend subscribers)
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 3 -q 0 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # Backend — Express + MQTT client + InfluxDB writer + alert engine
+  # -------------------------------------------------------------------------
+  factorymind-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: factorymind-backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_PORT: ${APP_PORT:-3002}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://factorymind:change_me_in_production@factorymind-postgres:5432/factorymind}
+      INFLUX_URL: ${INFLUX_URL:-http://factorymind-influxdb:8086}
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-please-generate-long-random-token-and-set-here}
+      INFLUX_ORG: ${INFLUX_ORG:-factorymind}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-factory-telemetry}
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://factorymind-mosquitto:1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-please-generate-at-least-32-character-secret-here}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-factorymind-backend}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # Admin bootstrap (install.sh scrive questi valori in .env).
+      # In produzione FM_REQUIRE_CUSTOM_ADMIN=true fa fallire il boot se
+      # l'installer non è stato eseguito — previene uso del seed demo.
+      FM_ADMIN_EMAIL: ${FM_ADMIN_EMAIL:-}
+      FM_ADMIN_PASSWORD_HASH: ${FM_ADMIN_PASSWORD_HASH:-}
+      FM_REQUIRE_CUSTOM_ADMIN: ${FM_REQUIRE_CUSTOM_ADMIN:-false}
+      # Housekeeping GDPR periodico (disattivabile, default ogni 24h).
+      FM_HOUSEKEEPING_INTERVAL_HOURS: ${FM_HOUSEKEEPING_INTERVAL_HOURS:-24}
+    ports:
+      - "3002:3002"
+    depends_on:
+      factorymind-postgres:
+        condition: service_healthy
+      factorymind-influxdb:
+        condition: service_healthy
+      factorymind-mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # Frontend — React 18 + Vite (dev-mode) or static (production build)
+  # -------------------------------------------------------------------------
+  factorymind-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: factorymind-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3002}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
+      VITE_MQTT_WS_URL: ${VITE_MQTT_WS_URL:-ws://localhost:9001}
+      VITE_DEFAULT_FACILITY: ${VITE_DEFAULT_FACILITY:-mozzecane}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - factorymind-backend
+    healthcheck:
+      # Usa 127.0.0.1: in Alpine localhost risolve prima ::1 e nginx
+      # è in ascolto solo IPv4 → wget fallirebbe con "connection refused".
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # Grafana — pre-provisioned dashboards + datasources
+  # -------------------------------------------------------------------------
+  factorymind-grafana:
+    image: grafana/grafana-oss:latest
+    container_name: factorymind-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me_grafana_admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-piechart-panel"
+      GF_SERVER_ROOT_URL: ${GRAFANA_URL:-http://localhost:3000}
+      GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-please-generate-long-random-token-and-set-here}
+      INFLUX_ORG: ${INFLUX_ORG:-factorymind}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-factory-telemetry}
+      POSTGRES_USER: ${POSTGRES_USER:-factorymind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: ${POSTGRES_DB:-factorymind}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      factorymind-influxdb:
+        condition: service_healthy
+      factorymind-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      - factorymind-net
+
+  # -------------------------------------------------------------------------
+  # IoT Simulator — realistic telemetry publisher
+  # -------------------------------------------------------------------------
+  factorymind-simulator:
+    build:
+      context: ./iot-simulator
+      dockerfile: Dockerfile
+    container_name: factorymind-simulator
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://factorymind-mosquitto:1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      SIM_FACILITY: ${SIM_FACILITY:-mozzecane}
+      SIM_LINES: ${SIM_LINES:-2}
+      SIM_MACHINES_PER_LINE: ${SIM_MACHINES_PER_LINE:-4}
+      SIM_INTERVAL_MS: ${SIM_INTERVAL_MS:-1000}
+      SIM_FAULT_PROBABILITY: ${SIM_FAULT_PROBABILITY:-0.01}
+    depends_on:
+      factorymind-mosquitto:
+        condition: service_healthy
+    networks:
+      - factorymind-net
+
+networks:
+  factorymind-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: factorymind-postgres-data
+  influxdb-data:
+    name: factorymind-influxdb-data
+  influxdb-config:
+    name: factorymind-influxdb-config
+  mosquitto-data:
+    name: factorymind-mosquitto-data
+  mosquitto-log:
+    name: factorymind-mosquitto-log
+  grafana-data:
+    name: factorymind-grafana-data

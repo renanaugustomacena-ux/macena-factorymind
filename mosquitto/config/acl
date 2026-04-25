@@ -1,0 +1,64 @@
+# ============================================================================
+# FactoryMind Mosquitto ACL — per-tenant topic authorization.
+#
+# Syntax: `user <name>` opens a section; subsequent `topic [read|write|readwrite] <pattern>`
+# lines apply to that user. Patterns support single-level (+) and multi-level (#)
+# wildcards and the %c/%u substitutions for client-id and username respectively.
+#
+# Tenancy model:
+#   - Each client connects with username = facility_id (e.g. "mozzecane").
+#   - The %u substitution confines every tenant to its own factory/<facility>/#
+#     subtree.  A tenant MUST NOT be able to read or write another tenant's
+#     topics.
+#   - A privileged "backend" user owns the full factory/# tree for aggregation,
+#     alerting, and downsampling.
+#   - A privileged "simulator" user owns factory/# for demo seeding.
+#
+# Activation (mosquitto.conf additions when TLS / auth are enabled):
+#     allow_anonymous false
+#     password_file   /mosquitto/config/passwd
+#     acl_file        /mosquitto/config/acl
+#
+# ============================================================================
+
+# Default anonymous denial: if ACLs are on but a user lacks explicit rules,
+# the broker denies the PUBLISH / SUBSCRIBE.
+# (Anonymous access MUST be disabled in production via mosquitto.conf.)
+
+# ----------------------------------------------------------------------------
+# Per-tenant pattern: every username maps 1:1 to its facility topic subtree.
+# ----------------------------------------------------------------------------
+pattern readwrite factory/%u/#
+pattern read      factory/%u/+/+/status
+pattern read      factory/%u/+/+/telemetry
+pattern read      factory/%u/+/+/alarms
+pattern read      factory/%u/+/+/counters
+pattern write     factory/%u/+/+/commands
+pattern read      $SYS/broker/clients/connected
+
+# ----------------------------------------------------------------------------
+# Privileged users
+# ----------------------------------------------------------------------------
+user backend
+topic readwrite factory/#
+topic read      $SYS/#
+
+user simulator
+topic readwrite factory/#
+
+user grafana
+topic read factory/#
+
+# ----------------------------------------------------------------------------
+# Example tenant — Mozzecane facility.
+# Derive further tenants by copy-paste; the pattern block above makes this
+# largely unnecessary when usernames are provisioned to equal facility_ids.
+# ----------------------------------------------------------------------------
+user mozzecane
+topic readwrite factory/mozzecane/#
+topic deny      factory/#
+
+# Additional facilities (uncomment and extend):
+# user legnago
+# topic readwrite factory/legnago/#
+# topic deny      factory/#

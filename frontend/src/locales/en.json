@@ -1,0 +1,126 @@
+{
+  "app": {
+    "title": "FactoryMind",
+    "tagline": "Monitor Your Production in Real Time",
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "line": "Line",
+    "devices": "Machines",
+    "alerts": "Alerts",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "title": "Plant Overview",
+    "oee": {
+      "label": "OEE (Overall Equipment Effectiveness)",
+      "availability": "Availability",
+      "performance": "Performance",
+      "quality": "Quality",
+      "world_class": "World-class (>= 85%)",
+      "above_target": "Above target",
+      "below_target": "Below target",
+      "insufficient_data": "Insufficient data"
+    },
+    "production": {
+      "good": "Good parts",
+      "reject": "Rejects",
+      "total": "Total produced",
+      "cycle_time": "Mean cycle time (s)",
+      "shift": "Shift",
+      "target": "Target"
+    }
+  },
+  "machines": {
+    "title": "Machine Configuration",
+    "table": {
+      "name": "Name",
+      "vendor": "Vendor",
+      "model": "Model",
+      "protocol": "Protocol",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "running": "Running",
+      "idle": "Idle",
+      "down": "Down",
+      "unknown": "Unknown"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "attestazione_piano4": "Generate Piano 4.0 attestation"
+    }
+  },
+  "alerts": {
+    "title": "Active Alerts",
+    "severity": {
+      "warning": "Warning",
+      "major": "Major",
+      "critical": "Critical"
+    },
+    "status": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
+    },
+    "actions": {
+      "acknowledge": "Acknowledge",
+      "resolve": "Resolve"
+    },
+    "empty": "No active alerts"
+  },
+  "reports": {
+    "title": "Production Reports",
+    "period": {
+      "today": "Today",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter",
+      "custom": "Custom"
+    },
+    "export": "Export",
+    "export_formats": {
+      "pdf": "PDF",
+      "csv": "CSV",
+      "xlsx": "Excel"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "email": "Email address",
+      "password": "Password",
+      "submit": "Sign in",
+      "forgot": "Forgot password?",
+      "invalid_credentials": "Invalid credentials",
+      "account_locked": "Account temporarily locked. Try again later.",
+      "too_many_attempts": "Too many attempts. Please wait and retry."
+    },
+    "password_policy": {
+      "min_length": "Password must be at least 12 characters",
+      "breached": "This password appears in known breach corpora. Choose a different password.",
+      "weak": "Password too weak"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "refresh": "Refresh",
+    "search": "Search",
+    "filter": "Filter"
+  },
+  "connection": {
+    "mqtt_connected": "MQTT connected",
+    "mqtt_disconnected": "MQTT disconnected — attempting to reconnect",
+    "api_unreachable": "Backend unreachable"
+  }
+}

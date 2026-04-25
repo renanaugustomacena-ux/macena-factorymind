@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker volume *)",
+      "Bash(docker compose *)",
+      "Bash(command -v shellcheck)",
+      "Bash(command -v gitleaks)",
+      "Bash(gitleaks detect *)",
+      "Bash(semgrep --config=p/owasp-top-ten --config=p/nodejs --severity=ERROR --quiet --json backend/src/)",
+      "Bash(trivy image *)",
+      "Bash(APP_ENV=production JWT_SECRET=please-generate-at-least-32-character-secret-here DATABASE_URL=postgresql://fx:change_me_in_production@localhost:5432/db INFLUX_URL=http://localhost:8086 INFLUX_TOKEN=please-generate-long-random-token-and-set-here INFLUX_ORG=x INFLUX_BUCKET=x MQTT_BROKER_URL=mqtt://localhost:1883 node -e 'try { require\\(\"./src/config\"\\); console.log\\(\"UNEXPECTEDLY passed\"\\); process.exit\\(2\\) } catch \\(e\\) { console.log\\(\"BLOCKED as expected:\", e.message.substring\\(0, 80\\)\\); process.exit\\(0\\) }')",
+      "Bash(git -C \"/media/renan/SSD Portable/STUDIO-LAVORO/macena-tools-lavoro/FactoryMind\" rev-parse --is-inside-work-tree)",
+      "Bash(git -C \"/media/renan/SSD Portable/STUDIO-LAVORO/macena-tools-lavoro/FactoryMind\" rev-parse --show-toplevel)"
+    ]
+  }
+}

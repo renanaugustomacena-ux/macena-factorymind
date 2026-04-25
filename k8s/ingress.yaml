@@ -1,0 +1,71 @@
+# ============================================================================
+# FactoryMind public Ingress.
+#
+# Security headers are applied at the ingress layer to ensure they are set
+# consistently even if the backend omits one. TLS 1.3 only; HSTS 1 year with
+# preload; CSP aligned with helmet config in src/index.js.
+# Rate limiting at ingress is an additional layer on top of express-rate-limit.
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: factorymind
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    # --- TLS hardening -----------------------------------------------------
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
+    nginx.ingress.kubernetes.io/hsts-preload: "true"
+    # --- Security headers --------------------------------------------------
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
+      more_set_headers "Cross-Origin-Opener-Policy: same-origin";
+      more_set_headers "Cross-Origin-Resource-Policy: same-site";
+    # --- Rate limit at edge ------------------------------------------------
+    nginx.ingress.kubernetes.io/limit-connections: "100"
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    # --- Body size ---------------------------------------------------------
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+    # --- WebSocket upgrade --------------------------------------------------
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - factorymind.example
+        - api.factorymind.example
+      secretName: factorymind-tls
+  rules:
+    - host: factorymind.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: factorymind-frontend
+                port:
+                  number: 80
+    - host: api.factorymind.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: factorymind-backend
+                port:
+                  number: 80

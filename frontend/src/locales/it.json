@@ -1,0 +1,174 @@
+{
+  "app": {
+    "title": "FactoryMind",
+    "tagline": "Monitoraggio di produzione in tempo reale",
+    "loading": "Caricamento in corso...",
+    "error": "Si è verificato un errore imprevisto",
+    "error_boundary": {
+      "heading": "La pagina non può essere visualizzata",
+      "body": "I dati della produzione restano al sicuro. Può riprovare oppure ricaricare il browser.",
+      "retry": "Riprova",
+      "reload": "Ricarica pagina"
+    },
+    "version": "Versione"
+  },
+  "nav": {
+    "dashboard": "Cruscotto",
+    "line": "Linea",
+    "devices": "Macchine",
+    "alerts": "Allarmi",
+    "reports": "Report",
+    "settings": "Impostazioni",
+    "logout": "Esci"
+  },
+  "dashboard": {
+    "title": "Cruscotto di produzione",
+    "subtitle_facility": "Stabilimento {{facility}}",
+    "subtitle_machines": "{{count}} macchine collegate",
+    "oee": {
+      "label": "OEE (Efficienza complessiva dell'impianto)",
+      "availability": "Disponibilità",
+      "availability_hint": "Tempo operativo sul tempo pianificato",
+      "performance": "Rendimento",
+      "performance_hint": "Tempo ciclo reale rispetto a quello nominale",
+      "quality": "Qualità",
+      "quality_hint": "Pezzi buoni sul totale prodotto",
+      "world_class": "Eccellenza (>= 85%)",
+      "above_average": "Sopra la media del settore",
+      "average": "In media con il settore",
+      "below_target": "Sotto obiettivo",
+      "zero_production": "Produzione assente nel periodo",
+      "insufficient_data": "Dati insufficienti per il calcolo"
+    },
+    "production": {
+      "good": "Pezzi conformi",
+      "reject": "Scarti",
+      "total": "Totale prodotto",
+      "cycle_time": "Tempo ciclo medio (s)",
+      "shift": "Turno",
+      "target": "Obiettivo"
+    },
+    "machines_heading": "Stato delle macchine",
+    "alerts_heading": "Allarmi aperti"
+  },
+  "machines": {
+    "title": "Configurazione macchine",
+    "subtitle": "Anagrafica e parametri di processo delle macchine dello stabilimento.",
+    "table": {
+      "name": "Nome",
+      "vendor": "Costruttore",
+      "model": "Modello",
+      "protocol": "Protocollo",
+      "status": "Stato",
+      "cycle_time_ideal": "Tempo ciclo ideale (s)",
+      "ideal_output": "Produzione oraria nominale",
+      "actions": "Azioni"
+    },
+    "status": {
+      "running": "In funzione",
+      "idle": "Inattiva",
+      "down": "Ferma",
+      "unknown": "Stato sconosciuto"
+    },
+    "actions": {
+      "edit": "Modifica",
+      "delete": "Rimuovi",
+      "attestazione_piano4": "Genera attestazione Piano 4.0/5.0",
+      "details": "Dettagli macchina"
+    },
+    "last_update": "Ultimo aggiornamento",
+    "empty": "Nessuna macchina registrata. Contattare il supporto."
+  },
+  "alerts": {
+    "title": "Allarmi attivi",
+    "subtitle": "Eventi critici rilevati dal sistema che richiedono verifica operatore.",
+    "severity": {
+      "warning": "Avviso",
+      "major": "Grave",
+      "critical": "Critico"
+    },
+    "status": {
+      "open": "Aperto",
+      "acknowledged": "Preso in carico",
+      "resolved": "Risolto"
+    },
+    "actions": {
+      "acknowledge": "Prendi in carico",
+      "resolve": "Segna come risolto"
+    },
+    "empty": "Nessun allarme attivo. Produzione regolare."
+  },
+  "reports": {
+    "title": "Report e attestazioni",
+    "subtitle": "Report di turno, andamento OEE e analisi Pareto dei fermi. Esportabile anche come attestazione Piano 4.0/5.0 per il commercialista.",
+    "shift_current": "Turno in corso",
+    "downtime_chart": {
+      "heading": "Pareto dei fermi macchina",
+      "loading": "Caricamento dati in corso...",
+      "error": "Dati dei fermi non disponibili in questo momento.",
+      "window_note": "Finestra osservata: ultime 24 ore. Totale fermi: {{minutes}} min su {{events}} eventi."
+    },
+    "period": {
+      "today": "Oggi",
+      "week": "Questa settimana",
+      "month": "Questo mese",
+      "quarter": "Questo trimestre",
+      "custom": "Intervallo personalizzato"
+    },
+    "export": "Esporta",
+    "export_formats": {
+      "pdf": "PDF",
+      "csv": "CSV",
+      "xlsx": "Excel"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Accesso al cruscotto",
+      "email": "Indirizzo email aziendale",
+      "password": "Password",
+      "submit": "Entra",
+      "forgot": "Ha dimenticato la password?",
+      "invalid_credentials": "Credenziali non corrette",
+      "account_locked": "Accesso sospeso per troppi tentativi. Riprovi tra qualche minuto.",
+      "too_many_attempts": "Troppi tentativi ravvicinati. Attenda e riprovi."
+    },
+    "password_policy": {
+      "min_length": "La password deve avere almeno 12 caratteri.",
+      "breached": "Questa password compare in violazioni note in rete. Ne scelga un'altra.",
+      "weak": "La password non è abbastanza robusta.",
+      "hibp_unavailable": "Servizio di verifica password non disponibile. Riprovi fra qualche istante."
+    }
+  },
+  "connection": {
+    "mqtt_connected": "Canale MQTT attivo",
+    "mqtt_disconnected": "Canale MQTT interrotto. Tentativi di riconnessione in corso...",
+    "api_unreachable": "Backend non raggiungibile. Controllare la rete aziendale.",
+    "connecting": "Connessione in corso..."
+  },
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "yes": "Sì",
+    "no": "No",
+    "refresh": "Aggiorna",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "edit": "Modifica",
+    "delete": "Rimuovi",
+    "download": "Scarica",
+    "back": "Indietro",
+    "next": "Avanti"
+  },
+  "attestazione": {
+    "title": "Attestazione Piano 4.0/5.0",
+    "generate": "Genera attestazione PDF",
+    "preview": "Anteprima dati",
+    "verify": "Verifica attestazione",
+    "revoke": "Revoca attestazione",
+    "eligible": "Macchina ammessa al credito d'imposta",
+    "not_eligible": "Macchina non ammessa: requisiti non soddisfatti",
+    "disclaimer": "Documento tecnico. La responsabilità fiscale resta in capo al titolare dell'impresa e al suo commercialista."
+  }
+}

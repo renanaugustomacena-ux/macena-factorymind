@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#475569" />
+    <meta name="description" content="FactoryMind — Monitora la Tua Produzione in Tempo Reale. OEE, allarmi, attestazione Piano Transizione 4.0 e 5.0 per le PMI manifatturiere di Verona e del Veneto." />
+    <meta property="og:title" content="FactoryMind — Monitoraggio della Produzione Industriale" />
+    <meta property="og:description" content="Dashboard, OEE, allarmi e attestazione Piano Transizione 4.0/5.0 per le PMI manifatturiere del Veneto." />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:type" content="website" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>FactoryMind — Monitora la Tua Produzione in Tempo Reale</title>
+  </head>
+  <body>
+
+    <!-- ============================================================= NAV -->
+    <header class="nav" role="banner">
+      <div class="container nav-inner">
+        <a href="#top" class="brand" aria-label="FactoryMind home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-text">FactoryMind</span>
+        </a>
+        <nav aria-label="Navigazione principale">
+          <ul class="nav-links">
+            <li><a href="#problema">Il Problema</a></li>
+            <li><a href="#soluzione">La Soluzione</a></li>
+            <li><a href="#funzionalita">Funzionalità</a></li>
+            <li><a href="#come-funziona">Come funziona</a></li>
+            <li><a href="#prezzi">Prezzi</a></li>
+            <li><a href="#contatti" class="btn btn-primary btn-sm">Richiedi demo</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <!-- =========================================================== HERO -->
+    <section id="top" class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Industria 4.0 · Veneto · PMI Manifatturiere</span>
+          <h1>Monitora la Tua Produzione in Tempo Reale.</h1>
+          <p class="lead">
+            FactoryMind è la piattaforma IoT industriale progettata per le PMI
+            manifatturiere del Veneto. Collega macchine, PLC, MES ed ERP, misura
+            in tempo reale l'<strong>OEE</strong> e abilita la rendicontazione
+            Piano Transizione 4.0 e 5.0 — con crediti fiscali fino al 45%.
+          </p>
+          <div class="hero-cta">
+            <a href="#contatti" class="btn btn-primary">Richiedi una demo gratuita</a>
+            <a href="#come-funziona" class="btn btn-secondary">Scopri come funziona</a>
+          </div>
+          <ul class="hero-badges" aria-label="Conformità normativa">
+            <li>Piano 4.0 compliant</li>
+            <li>Piano 5.0 ready</li>
+            <li>OPC UA · MQTT · Modbus</li>
+            <li>GDPR · ISO 27001 pronto</li>
+          </ul>
+        </div>
+        <figure class="hero-mockup" aria-hidden="true">
+          <div class="mockup-window">
+            <div class="mockup-titlebar">
+              <span></span><span></span><span></span>
+              <span class="mockup-url">dashboard.factorymind.it</span>
+            </div>
+            <div class="mockup-body">
+              <div class="mockup-kpi">
+                <span class="kpi-label">OEE</span>
+                <span class="kpi-value">78%</span>
+              </div>
+              <div class="mockup-kpi">
+                <span class="kpi-label">Availability</span>
+                <span class="kpi-value">92%</span>
+              </div>
+              <div class="mockup-kpi">
+                <span class="kpi-label">Performance</span>
+                <span class="kpi-value">88%</span>
+              </div>
+              <div class="mockup-kpi">
+                <span class="kpi-label">Quality</span>
+                <span class="kpi-value">96%</span>
+              </div>
+              <div class="mockup-chart">
+                <div class="bar" style="--h:40%"></div>
+                <div class="bar" style="--h:60%"></div>
+                <div class="bar" style="--h:80%"></div>
+                <div class="bar" style="--h:55%"></div>
+                <div class="bar" style="--h:70%"></div>
+                <div class="bar" style="--h:90%"></div>
+                <div class="bar" style="--h:75%"></div>
+                <div class="bar" style="--h:85%"></div>
+              </div>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ======================================================== PROBLEMA -->
+    <section id="problema" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Il Problema</h2>
+        <p class="section-lead">
+          Il Veneto è la regione italiana con la più alta adozione Industria 4.0
+          (11,7% — primato condiviso con il Piemonte), ma la maggior parte
+          delle PMI della provincia di Verona fatica ancora a collegare macchine,
+          gestionale e contabilità di produzione.
+        </p>
+        <div class="stat-grid">
+          <article class="stat-card">
+            <span class="stat-number">60%</span>
+            <p>delle PMI manifatturiere venete non ha un sistema integrato di monitoraggio della produzione.</p>
+          </article>
+          <article class="stat-card">
+            <span class="stat-number">73%</span>
+            <p>gestisce gli ordini di produzione ancora tramite fogli Excel o carta.</p>
+          </article>
+          <article class="stat-card">
+            <span class="stat-number">€13,381 Mld</span>
+            <p>di crediti fiscali Piano Transizione 4.0 disponibili — ma non erogati senza macchine interconnesse.</p>
+          </article>
+          <article class="stat-card">
+            <span class="stat-number">11,7%</span>
+            <p>di PMI venete ad alta maturità digitale — il resto perde competitività ogni mese.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== SOLUZIONE -->
+    <section id="soluzione" class="section">
+      <div class="container">
+        <h2 class="section-title">La Soluzione</h2>
+        <p class="section-lead">
+          FactoryMind porta dati, intelligenza e automazione in officina in meno di
+          quattro settimane. Il kit arriva preconfigurato per i protocolli
+          industriali più diffusi e produce subito la documentazione di conformità
+          per i crediti di imposta.
+        </p>
+        <div class="solution-grid">
+          <article class="solution-card">
+            <span class="solution-icon" aria-hidden="true">⚙</span>
+            <h3>Interconnessione chiavi in mano</h3>
+            <p>
+              Collegamento di CNC, PLC e robotica via OPC UA, MQTT Sparkplug B o
+              Modbus TCP/RTU. Compatibile con Siemens, Beckhoff, Rockwell, Mazak,
+              Okuma, Mitsubishi e principali macchine del distretto.
+            </p>
+          </article>
+          <article class="solution-card">
+            <span class="solution-icon" aria-hidden="true">📊</span>
+            <h3>OEE sempre aggiornato</h3>
+            <p>
+              Availability, Performance e Quality calcolate in tempo reale a
+              partire dai cicli macchina reali e dal piano di turno. Dashboard
+              Grafana preconfigurate per operatori, responsabili di produzione
+              e management.
+            </p>
+          </article>
+          <article class="solution-card">
+            <span class="solution-icon" aria-hidden="true">🛡</span>
+            <h3>Piano 4.0 / 5.0 pronto</h3>
+            <p>
+              Attestazione tecnica automatica conforme alle "caratteristiche
+              tecnologiche" previste dal Piano Transizione 4.0 e 5.0. Crediti
+              fiscali dal 5% al 45% in funzione del risparmio energetico.
+            </p>
+          </article>
+          <article class="solution-card">
+            <span class="solution-icon" aria-hidden="true">🔔</span>
+            <h3>Allarmi e manutenzione predittiva</h3>
+            <p>
+              Regole configurabili, escalation automatica, report di turno e
+              modello di manutenzione predittiva opzionale per anticipare
+              guasti costosi.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== FUNZIONALITA -->
+    <section id="funzionalita" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Tutte le funzionalità incluse</h2>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">📡</span>
+            <h3>Broker MQTT integrato</h3>
+            <p>Eclipse Mosquitto o EMQX con supporto TLS e Sparkplug B.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">📈</span>
+            <h3>Time-series scalabile</h3>
+            <p>InfluxDB 2.x con downsampling 1s → 1m → 1h → 1d e retention policies.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">🏭</span>
+            <h3>Modello multi-facility</h3>
+            <p>Gerarchia stabilimento → linea → macchina, ruoli RBAC granulari.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">📝</span>
+            <h3>Report e attestazione</h3>
+            <p>Report PDF di turno, export OEE, attestazione tecnica T4.0/T5.0.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">🔐</span>
+            <h3>Sicurezza enterprise</h3>
+            <p>OPC UA Basic256Sha256, MQTT TLS + certificati X.509 per dispositivo.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">☁</span>
+            <h3>Cloud sovrano o on-premise</h3>
+            <p>Deployment su Aruba Cloud, OVHcloud Milano, AWS eu-south-1 o in fabbrica.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== COME FUNZIONA -->
+    <section id="come-funziona" class="section">
+      <div class="container">
+        <h2 class="section-title">Come funziona in 4 passi</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-num">1</span>
+            <h3>Audit di fabbrica</h3>
+            <p>
+              Sopralluogo con il nostro tecnico presso la vostra azienda (area
+              Mozzecane, Verona, Veneto, tutto il Nord Italia). Mappatura delle
+              macchine e dei protocolli disponibili.
+            </p>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <h3>Installazione gateway</h3>
+            <p>
+              Gateway edge preconfigurato, collegamento alle macchine via OPC UA,
+              Modbus o MQTT. Broker MQTT e time-series database attivi in giornata.
+            </p>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <h3>Dashboard e formazione</h3>
+            <p>
+              Dashboard Grafana e FactoryMind accessibili da PC e tablet in
+              officina. Due giornate di formazione on-site per operatori e
+              responsabili.
+            </p>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <h3>Attestazione Piano 4.0 / 5.0</h3>
+            <p>
+              Documento tecnico conforme ai requisiti di interconnessione
+              telematica, raccolta automatica dati e integrazione col gestionale.
+              Pronto per il commercialista.
+            </p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============================================================ PRICING -->
+    <section id="prezzi" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Piani e Prezzi</h2>
+        <p class="section-lead">
+          Nessun costo nascosto. Il credito fiscale Piano Transizione 4.0 / 5.0
+          spesso ripaga l'intero investimento nel primo anno.
+        </p>
+        <div class="price-grid">
+
+          <article class="price-card">
+            <h3>Starter</h3>
+            <p class="price"><span class="price-amount">€149</span><span class="price-period">/mese</span></p>
+            <p class="price-desc">Fino a 5 macchine collegate</p>
+            <ul class="price-features">
+              <li>Dashboard FactoryMind</li>
+              <li>OEE per macchina e per turno</li>
+              <li>Grafana preconfigurato</li>
+              <li>Allarmi base (email)</li>
+              <li>Supporto in orario ufficio</li>
+            </ul>
+            <a href="#contatti" class="btn btn-secondary btn-block">Inizia con Starter</a>
+          </article>
+
+          <article class="price-card price-card-featured">
+            <span class="badge-popular">Più scelto</span>
+            <h3>Professionale</h3>
+            <p class="price"><span class="price-amount">€499</span><span class="price-period">/mese</span></p>
+            <p class="price-desc">Fino a 25 macchine collegate</p>
+            <ul class="price-features">
+              <li>Tutto di Starter</li>
+              <li>OPC UA + Sparkplug B</li>
+              <li>Dashboard allarmi avanzata</li>
+              <li>Report PDF di turno automatici</li>
+              <li>Attestazione Piano 4.0 inclusa</li>
+              <li>Supporto prioritario 8×5</li>
+              <li>+€20/mese per macchina aggiuntiva</li>
+            </ul>
+            <a href="#contatti" class="btn btn-primary btn-block">Richiedi Professionale</a>
+          </article>
+
+          <article class="price-card">
+            <h3>Enterprise</h3>
+            <p class="price"><span class="price-amount">Preventivo</span></p>
+            <p class="price-desc">Macchine illimitate, multi-stabilimento</p>
+            <ul class="price-features">
+              <li>Tutto di Professionale</li>
+              <li>Integrazioni ERP / MES custom</li>
+              <li>Manutenzione predittiva ML</li>
+              <li>Attestazione Piano 5.0 (energia)</li>
+              <li>SLA 99,9%, supporto 24/7</li>
+              <li>On-premise o cloud sovrano</li>
+            </ul>
+            <a href="#contatti" class="btn btn-secondary btn-block">Parla con un esperto</a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== TESTIMONIAL -->
+    <section class="section">
+      <div class="container">
+        <h2 class="section-title">Cosa dicono i responsabili di produzione</h2>
+        <div class="testimonial-grid">
+          <blockquote class="testimonial">
+            <p>
+              "In meno di due mesi abbiamo collegato dodici centri di lavoro e
+              portato l'OEE dal 52 al 71%. L'attestazione Piano 4.0 ci ha
+              permesso di rientrare immediatamente dell'investimento."
+            </p>
+            <footer>
+              <strong>Marco B.</strong> — Responsabile Produzione, officina
+              meccanica Mozzecane
+            </footer>
+          </blockquote>
+          <blockquote class="testimonial">
+            <p>
+              "Grazie alle dashboard Grafana in reparto, i nostri operatori
+              vedono in tempo reale cosa succede in linea. Gli interventi di
+              manutenzione sono calati del 30%."
+            </p>
+            <footer>
+              <strong>Elena R.</strong> — Direttore Tecnico, Distretto del
+              Mobile di Verona
+            </footer>
+          </blockquote>
+          <blockquote class="testimonial">
+            <p>
+              "Avevamo già Siemens MindSphere, ma il costo era sproporzionato
+              per noi. FactoryMind ci ha dato il 90% delle funzionalità a un
+              decimo del costo e con supporto italiano."
+            </p>
+            <footer>
+              <strong>Luca M.</strong> — Titolare PMI componenti auto,
+              Valpolicella
+            </footer>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ CTA -->
+    <section id="contatti" class="section cta-section">
+      <div class="container cta-grid">
+        <div class="cta-copy">
+          <h2>Inizia oggi a misurare la tua produzione.</h2>
+          <p>
+            Prenotiamo insieme un sopralluogo gratuito e senza impegno presso il
+            vostro stabilimento. In due ore capirete esattamente cosa potete
+            recuperare in termini di OEE, fermi macchina e crediti fiscali.
+          </p>
+          <ul class="cta-points">
+            <li>Consulenza gratuita di 60 minuti</li>
+            <li>Preventivo entro 5 giorni lavorativi</li>
+            <li>Pilot gratuito su una macchina</li>
+          </ul>
+        </div>
+        <form id="ctaForm" class="cta-form" aria-label="Richiesta demo" novalidate>
+          <label>
+            Nome e cognome
+            <input type="text" name="nome" required minlength="2" maxlength="100" />
+          </label>
+          <label>
+            Azienda
+            <input type="text" name="azienda" required minlength="2" maxlength="200" />
+          </label>
+          <label>
+            Email aziendale
+            <input type="email" name="email" required maxlength="200" />
+          </label>
+          <label>
+            Telefono (opzionale)
+            <input type="tel" name="telefono" maxlength="30" autocomplete="tel" />
+          </label>
+          <label>
+            Numero di macchine e messaggio
+            <textarea name="messaggio" rows="4" required minlength="10" maxlength="3000" placeholder="Es. Gestiamo 12 macchine CNC tra lavorazione metalli e confezionamento. Vorremmo un pilot sulla linea principale."></textarea>
+          </label>
+          <!-- Honeypot anti-bot: invisibile e ignorato dall'utente. -->
+          <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;" />
+          <button type="submit" class="btn btn-primary btn-block" id="ctaSubmit">
+            Richiedi la demo
+          </button>
+          <p class="form-note" id="ctaStatus" role="status" aria-live="polite">
+            Rispettiamo la vostra privacy: i dati sono trattati ai sensi del
+            GDPR e non saranno mai ceduti a terzi.
+          </p>
+        </form>
+        <script>
+          (function () {
+            var form = document.getElementById('ctaForm');
+            var status = document.getElementById('ctaStatus');
+            var submit = document.getElementById('ctaSubmit');
+            if (!form) return;
+            var endpoint = (window.FACTORYMIND_API_BASE || '') + '/api/contact';
+            form.addEventListener('submit', function (ev) {
+              ev.preventDefault();
+              if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+              }
+              var payload = {};
+              new FormData(form).forEach(function (v, k) { payload[k] = String(v); });
+              submit.disabled = true;
+              var original = submit.textContent;
+              submit.textContent = 'Invio in corso...';
+              status.textContent = '';
+              fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              }).then(function (r) {
+                return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+              }).then(function (res) {
+                if (res.ok && res.body && res.body.status === 'ok') {
+                  form.reset();
+                  status.textContent = 'Richiesta inviata. La ricontatteremo entro 24 ore lavorative.';
+                } else if (res.body && res.body.status === 'smtp_not_configured') {
+                  status.textContent = 'Invio email non disponibile. Scriva direttamente a renan@factorymind.it';
+                } else if (res.body && res.body.message) {
+                  status.textContent = res.body.message;
+                } else {
+                  status.textContent = 'Invio non riuscito. Riprovi tra qualche istante.';
+                }
+              }).catch(function () {
+                status.textContent = 'Rete non raggiungibile. Riprovi più tardi.';
+              }).finally(function () {
+                submit.disabled = false;
+                submit.textContent = original;
+              });
+            });
+          })();
+        </script>
+      </div>
+    </section>
+
+    <!-- ========================================================== FOOTER -->
+    <footer class="footer" role="contentinfo">
+      <div class="container footer-grid">
+        <div>
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">FactoryMind</span>
+          </div>
+          <p class="footer-desc">
+            Industrial IoT per le PMI manifatturiere italiane.
+          </p>
+          <p class="made-in">Made in Verona · Mozzecane (VR)</p>
+        </div>
+        <div>
+          <h4>Prodotto</h4>
+          <ul class="footer-links">
+            <li><a href="#soluzione">Soluzione</a></li>
+            <li><a href="#funzionalita">Funzionalità</a></li>
+            <li><a href="#prezzi">Prezzi</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Azienda</h4>
+          <ul class="footer-links">
+            <li><a href="#contatti">Contatti</a></li>
+            <li><a href="#contatti">Partnership</a></li>
+            <li><a href="#contatti">Lavora con noi</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legali</h4>
+          <ul class="footer-links">
+            <li><a href="legal/informativa-privacy.html">Informativa privacy</a></li>
+            <li><a href="legal/cookie-policy.html">Cookie policy</a></li>
+            <li><a href="legal/termini-di-servizio.html">Termini di servizio</a></li>
+            <li><a href="legal/contratto-saas.html">Contratto SaaS B2B</a></li>
+          </ul>
+          <p class="vat">Titolare: Renan Augusto Macena &middot; Mozzecane (VR)</p>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <p>© 2026 FactoryMind. Tutti i diritti riservati.</p>
+        <p>Conforme GDPR · ISO 27001 ready · Piano Transizione 4.0 &amp; 5.0</p>
+      </div>
+    </footer>
+
+  </body>
+</html>

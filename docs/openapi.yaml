@@ -1,0 +1,387 @@
+openapi: 3.1.0
+info:
+  title: FactoryMind API
+  version: 1.0.0
+  summary: Industrial IoT monitoring API for Italian manufacturing SMEs.
+  description: |
+    FactoryMind exposes REST endpoints for real-time production monitoring:
+    facilities, lines, devices (machines), telemetry metrics, alerts, OEE
+    (Overall Equipment Effectiveness), and user administration.
+
+    Most endpoints require a Bearer access token. Error responses follow
+    RFC 7807 Problem Details (`application/problem+json`). State-changing
+    endpoints are rate-limited (60 req/min/IP default).
+  contact:
+    name: FactoryMind Engineering
+    email: support@factorymind.example
+    url: https://factorymind.example/support
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:3002
+    description: Local development (docker-compose)
+  - url: https://api.factorymind.example
+    description: Production
+tags:
+  - name: health
+  - name: auth
+  - name: facilities
+  - name: lines
+  - name: devices
+  - name: metrics
+  - name: alerts
+  - name: oee
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      summary: Liveness probe with dependency snapshot
+      responses:
+        '200':
+          description: Service is up and all deps healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthEnvelope'
+        '503':
+          description: Service is up but one or more deps are degraded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthEnvelope'
+  /api/ready:
+    get:
+      tags: [health]
+      summary: Readiness probe (traffic gate)
+      description: Returns 200 only once every dependency has been primed AND is currently healthy.
+      responses:
+        '200': { description: Ready to receive traffic }
+        '503':
+          description: Not ready.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /metrics:
+    get:
+      tags: [health]
+      summary: Prometheus scrape endpoint
+      responses:
+        '200':
+          description: Prometheus exposition format.
+          content:
+            text/plain: {}
+
+  /api/users/login:
+    post:
+      tags: [auth]
+      summary: Exchange email + password for access + refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12 }
+      responses:
+        '200':
+          description: Token pair issued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+  /api/users/token/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New token pair.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /api/users/logout:
+    post:
+      tags: [auth]
+      summary: Revoke all refresh tokens for the authenticated user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Success }
+
+  /api/users/me:
+    get:
+      tags: [auth]
+      summary: Return the claims carried by the current access token
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+
+  /api/users:
+    get:
+      tags: [auth]
+      summary: List users (admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserList' }
+    post:
+      tags: [auth]
+      summary: Create user (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserInput' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /api/facilities:
+    get:
+      tags: [facilities]
+      summary: List facilities
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: ok } }
+    post:
+      tags: [facilities]
+      summary: Create facility
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: created } }
+
+  /api/lines:
+    get:
+      tags: [lines]
+      summary: List production lines
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: ok } }
+
+  /api/devices:
+    get:
+      tags: [devices]
+      summary: List devices (machines)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: facility_id
+          schema: { type: string }
+        - in: query
+          name: line_id
+          schema: { type: string }
+      responses: { '200': { description: ok } }
+    post:
+      tags: [devices]
+      summary: Register a device
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: created } }
+  /api/devices/{id}:
+    get:
+      tags: [devices]
+      summary: Get a device
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: ok }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/devices/{id}/attestazione/piano4:
+    post:
+      tags: [devices]
+      summary: Generate a Piano Transizione 4.0 attestazione document for the device
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Document generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eligibility: { type: boolean }
+                  report: { type: object }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /api/metrics:
+    get:
+      tags: [metrics]
+      summary: Query Influx telemetry (scoped)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: ok } }
+
+  /api/alerts:
+    get:
+      tags: [alerts]
+      summary: List active alerts
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: ok } }
+  /api/alerts/{id}/acknowledge:
+    post:
+      tags: [alerts]
+      summary: Acknowledge an alert
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: ok }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/alerts/{id}/resolve:
+    post:
+      tags: [alerts]
+      summary: Resolve an alert
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: ok }
+
+  /api/oee:
+    get:
+      tags: [oee]
+      summary: Compute OEE for a line/machine over a time window
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: facility_id
+          schema: { type: string }
+        - in: query
+          name: line_id
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OEE bundle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  availability: { type: number, minimum: 0, maximum: 1 }
+                  performance: { type: number, minimum: 0, maximum: 1 }
+                  quality: { type: number, minimum: 0, maximum: 1 }
+                  oee: { type: number, minimum: 0, maximum: 1 }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Problem:
+      description: RFC 7807 error response.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+    HealthEnvelope:
+      type: object
+      required: [status, service, version, time]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        service: { type: string }
+        version: { type: string }
+        uptime_seconds: { type: integer }
+        time: { type: string, format: date-time }
+        dependencies:
+          type: object
+          properties:
+            postgres: { type: object }
+            influxdb: { type: object }
+            mosquitto: { type: object }
+    TokenPair:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        refresh_expires_at: { type: string, format: date-time }
+        token_type: { type: string, enum: [Bearer] }
+        user: { type: object }
+    UserInput:
+      type: object
+      required: [email, full_name, password]
+      properties:
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { type: string, enum: [admin, supervisor, operator, viewer] }
+        facility_scope:
+          type: array
+          items: { type: string }
+        password: { type: string, minLength: 12, maxLength: 128 }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        full_name: { type: string }
+        role: { type: string }
+        facility_scope:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+    UserList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/User' }
+        count: { type: integer }

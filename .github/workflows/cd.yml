@@ -1,0 +1,119 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/factorymind-backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/factorymind-frontend
+  IMAGE_SIMULATOR: ghcr.io/${{ github.repository_owner }}/factorymind-simulator
+
+jobs:
+  build-and-push:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
+            ${{ env.IMAGE_BACKEND }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          target: production
+          push: true
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
+            ${{ env.IMAGE_FRONTEND }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push simulator
+        uses: docker/build-push-action@v6
+        with:
+          context: ./iot-simulator
+          push: true
+          tags: |
+            ${{ env.IMAGE_SIMULATOR }}:${{ github.sha }}
+            ${{ env.IMAGE_SIMULATOR }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
+          format: spdx-json
+          output-file: backend-sbom.spdx.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: "*.spdx.json"
+
+  deploy-staging:
+    name: Deploy · staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy placeholder
+        run: echo "Rolling deployment to staging (terraform apply + ECS service update)."
+
+  smoke-test:
+    name: Staging smoke test
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - name: Health probe placeholder
+        run: echo "curl -fsS https://staging.factorymind.example/api/health"
+
+  deploy-production:
+    name: Deploy · production
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    environment: production
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy placeholder (blue-green)
+        run: echo "Swap blue/green target groups once new task set passes health checks."
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+    steps:
+      - run: echo "Slack / email notification placeholder."

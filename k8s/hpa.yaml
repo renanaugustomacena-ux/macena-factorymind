@@ -1,0 +1,66 @@
+# ============================================================================
+# FactoryMind backend HorizontalPodAutoscaler.
+#
+# Scaling signals:
+#   - CPU utilisation (primary): target 70%.
+#   - Memory utilisation (safety): target 75%.
+#   - Custom metric (event-loop lag P95 > 100 ms): scale out when sustained.
+#
+# Min replicas: 2 (survives one pod/node). Max: 10. Stabilisation tuned to
+# absorb MQTT burst traffic without thrashing the autoscaler.
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: factorymind-backend
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: factorymind-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+    # Custom metric requires prometheus-adapter + ServiceMonitor. Retained
+    # commented-out until the cluster has the adapter installed.
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: nodejs_eventloop_lag_p95_seconds
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "0.1"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+      selectPolicy: Min

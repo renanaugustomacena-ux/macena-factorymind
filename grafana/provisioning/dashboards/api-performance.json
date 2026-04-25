@@ -1,0 +1,133 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "title": "FactoryMind — API Performance",
+  "uid": "fm-api-perf",
+  "version": 1,
+  "timezone": "Europe/Rome",
+  "schemaVersion": 39,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "tags": ["factorymind", "api", "performance"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "HTTP requests per second",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"factorymind-backend\"}[1m])) by (method)",
+          "legendFormat": "{{method}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP latency P50 / P95 / P99 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{job=\"factorymind-backend\"}[5m])) by (le)) * 1000", "legendFormat": "P50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"factorymind-backend\"}[5m])) by (le)) * 1000", "legendFormat": "P95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"factorymind-backend\"}[5m])) by (le)) * 1000", "legendFormat": "P99", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latency P95 by route",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"factorymind-backend\"}[5m])) by (le, route)) * 1000",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Availability (last 30 days)",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "1 - (sum(rate(http_requests_total{job=\"factorymind-backend\",status=~\"5..\"}[30d])) / sum(rate(http_requests_total{job=\"factorymind-backend\"}[30d])))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 0.995 },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Error budget burn (7d)",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(rate(http_requests_total{job=\"factorymind-backend\",status=~\"5..\"}[7d])) / sum(rate(http_requests_total{job=\"factorymind-backend\"}[7d]))) / 0.005",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "WebSocket connections",
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        { "expr": "factorymind_ws_connections", "legendFormat": "connected", "refId": "A" }
+      ]
+    }
+  ]
+}

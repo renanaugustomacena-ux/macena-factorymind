@@ -1,0 +1,63 @@
+# ============================================================================
+# FactoryMind backend Service — cluster-internal endpoint consumed by
+# the Ingress + by Grafana (read-only) + by internal alert-webhook endpoints.
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: factorymind-backend
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: backend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3002"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 3002
+      protocol: TCP
+  sessionAffinity: None
+---
+# Dedicated Service for Mosquitto running as a StatefulSet (per-tenant ACL
+# requires stable hostname + persistent volume). This manifest advertises
+# the broker within the cluster; TLS (8883) is terminated by ingress in
+# production, TCP 1883 is kept for cluster-internal bridges only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: factorymind-mosquitto
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: mosquitto
+spec:
+  type: ClusterIP
+  clusterIP: None  # headless for StatefulSet stable DNS
+  selector:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+      protocol: TCP
+    - name: mqtt-ws
+      port: 9001
+      targetPort: 9001
+      protocol: TCP
+    - name: mqtts
+      port: 8883
+      targetPort: 8883
+      protocol: TCP

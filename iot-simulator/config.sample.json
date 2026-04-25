@@ -1,0 +1,48 @@
+{
+  "facility": "mozzecane",
+  "lines": [
+    {
+      "line_id": "line-01",
+      "machines": [
+        {
+          "machine_id": "machine-01",
+          "vendor": "Mazak",
+          "model": "Quick Turn 250",
+          "ideal_cycle_time_sec": 18,
+          "metrics": [
+            { "name": "spindle_speed",  "unit": "rpm",  "mean": 3000, "stdDev": 100, "min": 0,    "max": 4500 },
+            { "name": "spindle_temp_c", "unit": "°C",   "mean": 65,   "stdDev": 3,   "min": 20,   "max": 95   },
+            { "name": "feed_rate",      "unit": "mm/min","mean": 200, "stdDev": 10,  "min": 0,    "max": 500  },
+            { "name": "power_kw",       "unit": "kW",   "mean": 7.5,  "stdDev": 1.2, "min": 0.2,  "max": 15   },
+            { "name": "current_a",      "unit": "A",    "mean": 14,   "stdDev": 2,   "min": 0,    "max": 30   }
+          ]
+        },
+        {
+          "machine_id": "machine-02",
+          "vendor": "Mazak",
+          "model": "Quick Turn 250",
+          "ideal_cycle_time_sec": 18,
+          "metrics": [
+            { "name": "spindle_speed",  "unit": "rpm",  "mean": 2950, "stdDev": 120, "min": 0,  "max": 4500 },
+            { "name": "spindle_temp_c", "unit": "°C",   "mean": 62,   "stdDev": 3,   "min": 20, "max": 95   }
+          ]
+        }
+      ]
+    },
+    {
+      "line_id": "line-02",
+      "machines": [
+        {
+          "machine_id": "machine-01",
+          "vendor": "Beckhoff",
+          "model": "CX5140",
+          "ideal_cycle_time_sec": 35,
+          "metrics": [
+            { "name": "vibration_mm_s", "unit": "mm/s", "mean": 3.2, "stdDev": 0.4, "min": 0, "max": 18 },
+            { "name": "air_pressure_bar", "unit": "bar", "mean": 6.2, "stdDev": 0.2, "min": 4, "max": 8 }
+          ]
+        }
+      ]
+    }
+  ]
+}

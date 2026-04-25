@@ -1,0 +1,60 @@
+# ============================================================================
+# FactoryMind Alertmanager routing configuration.
+#
+# Tree:
+#   default -> route by severity
+#     severity=critical -> receiver "pager" (PagerDuty / Opsgenie)
+#     severity=warning  -> receiver "ticket" (email / Slack)
+#
+# Inhibit rules are used to silence warning alerts while a critical for the
+# same service is active (avoids flooding the on-call when a dep-down cascades).
+# ============================================================================
+global:
+  resolve_timeout: 5m
+  smtp_from: alerts@factorymind.example
+  smtp_smarthost: smtp.factorymind.example:587
+  smtp_require_tls: true
+  # smtp_auth_username: <from Secret>
+  # smtp_auth_password: <from Secret>
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+route:
+  receiver: ticket
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: pager
+      continue: false
+      repeat_interval: 1h
+    - matchers:
+        - severity="warning"
+      receiver: ticket
+      continue: false
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ["service"]
+
+receivers:
+  - name: pager
+    # pagerduty_configs:
+    #   - routing_key: <PAGERDUTY_INTEGRATION_KEY>
+    #     description: "{{ .CommonAnnotations.summary }}"
+    webhook_configs:
+      - url: https://events.pagerduty.com/integration/CHANGE_ME/enqueue
+        send_resolved: true
+  - name: ticket
+    email_configs:
+      - to: sre@factorymind.example
+        send_resolved: true
+        headers:
+          Subject: "[FactoryMind] {{ .CommonLabels.alertname }} ({{ .Status }})"

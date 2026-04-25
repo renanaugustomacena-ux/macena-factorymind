@@ -1,0 +1,16 @@
+{
+  "name": "factorymind-simulator",
+  "version": "1.0.0",
+  "description": "Realistic industrial-IoT telemetry simulator for FactoryMind. Publishes MQTT traffic matching the canonical factory/... topic hierarchy.",
+  "private": true,
+  "type": "commonjs",
+  "main": "simulator.js",
+  "scripts": {
+    "start": "node simulator.js",
+    "dev": "node --watch simulator.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.3",
+    "yargs": "^17.7.2"
+  }
+}

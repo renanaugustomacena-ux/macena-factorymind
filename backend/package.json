@@ -1,0 +1,69 @@
+{
+  "name": "factorymind-backend",
+  "version": "1.0.0",
+  "description": "FactoryMind backend — Express + MQTT + InfluxDB + PostgreSQL. Industrial-IoT monitoring for Italian manufacturing SMEs. Piano Transizione 4.0 / 5.0 compatible.",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage --passWithNoTests",
+    "migrate:create": "node-pg-migrate create",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down"
+  },
+  "dependencies": {
+    "@influxdata/influxdb-client": "^1.35.0",
+    "@influxdata/influxdb-client-apis": "^1.35.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.54.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.57.0",
+    "@opentelemetry/resources": "^1.30.0",
+    "@opentelemetry/sdk-node": "^0.57.0",
+    "@opentelemetry/semantic-conventions": "^1.30.0",
+    "bullmq": "^5.34.0",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "modbus-serial": "^8.0.18",
+    "mqtt": "^5.10.3",
+    "node-opcua": "^2.140.0",
+    "nodemailer": "^8.0.5",
+    "pdfkit": "^0.15.2",
+    "pg": "^8.13.1",
+    "pg-pool": "^3.7.0",
+    "pino": "^9.6.0",
+    "pino-http": "^10.3.0",
+    "sparkplug-payload": "^1.0.2",
+    "uuid": "^11.0.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/jest": "^29.5.14",
+    "audit-ci": "^7.1.0",
+    "eslint": "^9.17.0",
+    "globals": "^17.5.0",
+    "jest": "^29.7.0",
+    "node-pg-migrate": "^8.0.4",
+    "supertest": "^7.0.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.5.5"
+  }
+}

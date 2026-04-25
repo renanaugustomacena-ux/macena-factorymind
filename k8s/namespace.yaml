@@ -1,0 +1,93 @@
+# ============================================================================
+# FactoryMind namespace + NetworkPolicy defaults.
+#
+# Network policy defaults to deny-all; allowed flows are whitelisted below.
+# Apply this manifest FIRST, then the rest of k8s/*.
+# ============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: factorymind
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-allow
+  namespace: factorymind
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # From ingress-nginx controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 3002
+          protocol: TCP
+    # From Prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 3002
+          protocol: TCP
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Postgres, Influx, Mosquitto in-namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: factorymind
+      ports:
+        - port: 5432
+          protocol: TCP
+        - port: 8086
+          protocol: TCP
+        - port: 1883
+          protocol: TCP
+        - port: 8883
+          protocol: TCP
+    # OTEL collector
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: 4317
+          protocol: TCP
+    # SMTP (alerting)
+    - ports:
+        - port: 587
+          protocol: TCP

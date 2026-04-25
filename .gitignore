@@ -1,0 +1,106 @@
+# FactoryMind .gitignore
+
+# ---- Node.js ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm/
+.pnp.*
+.yarn/*
+!.yarn/releases
+!.yarn/patches
+!.yarn/plugins
+!.yarn/sdks
+
+# ---- Build artefacts ----
+dist/
+build/
+coverage/
+.next/
+out/
+.svelte-kit/
+.turbo/
+.vite/
+*.tsbuildinfo
+.parcel-cache/
+
+# ---- Frontend ----
+frontend/dist/
+frontend/build/
+
+# ---- Environment / secrets ----
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.pem
+*.key
+*.crt
+!ca.crt.example
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ---- Logs ----
+logs/
+*.log
+pino-*.log
+
+# ---- Tests ----
+coverage/
+.nyc_output/
+junit.xml
+test-report.xml
+
+# ---- Docker ----
+docker-compose.override.yml
+
+# ---- Terraform ----
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfstate.*.backup
+terraform/*.tfvars
+!terraform/terraform.tfvars.example
+terraform/crash.log
+terraform/override.tf
+terraform/override.tf.json
+
+# ---- IoT-specific ----
+iot-simulator/recordings/
+backend/data/
+influxdb-data/
+postgres-data/
+mosquitto-data/
+grafana-data/
+
+# ---- MQTT broker artefacts ----
+mosquitto.log
+mosquitto.db
+passwd
+passwd.tmp
+
+# ---- InfluxDB local ----
+influxdb.bolt
+engine/
+wal/
+
+# ---- Temporary files ----
+tmp/
+temp/
+*.tmp
+*.bak

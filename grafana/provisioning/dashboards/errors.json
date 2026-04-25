@@ -1,0 +1,79 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "title": "FactoryMind — Errors",
+  "uid": "fm-errors",
+  "version": 1,
+  "timezone": "Europe/Rome",
+  "schemaVersion": 39,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "tags": ["factorymind", "errors"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "HTTP error rate (4xx / 5xx)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"factorymind-backend\",status=~\"4..\"}[1m]))", "legendFormat": "4xx", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"factorymind-backend\",status=~\"5..\"}[1m]))", "legendFormat": "5xx", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "5xx ratio (5 min)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"factorymind-backend\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"factorymind-backend\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.005 },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Top-10 failing routes (5xx, last 1h)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        {
+          "expr": "topk(10, sum(increase(http_requests_total{job=\"factorymind-backend\",status=~\"5..\"}[1h])) by (route, status))",
+          "refId": "A",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Alert engine errors / fired-alerts ratio",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "fm-prometheus" },
+      "targets": [
+        { "expr": "sum(rate(factorymind_alerts_fired_total[5m]))", "legendFormat": "alerts fired", "refId": "A" },
+        { "expr": "sum(rate(factorymind_alert_engine_errors_total[5m]))", "legendFormat": "engine errors", "refId": "B" }
+      ]
+    }
+  ]
+}
