@@ -339,7 +339,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** revert; previous behaviour (no validation) restored.
 - **Communication:** changelog.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — pure validator extracted to `backend/src/services/opcua-endpoint-validator.js`; `opcua-bridge.js::start()` invokes it before `OPCUAClient.connect()` and refuses to start the bridge on reject (logs ERROR, backend continues without OPC UA per ticket exit criteria). `OPCUA_ALLOWED_HOSTS` added to Joi schema + `.env.example`. Coverage: `backend/tests/opcua-endpoint-validator.test.js` 17 cases including AWS/GCP/Alibaba metadata pivots, IPv6 loopback, RFC1918 IP-literal-as-allow-list bypass, and case-insensitive accept.
 - **Why this remediation, not another:**
   - Alternative — DNS-only validation: rejected; doesn't block direct IP literals.
   - Alternative — outbound HTTP allow-list at the network layer: complementary, but doesn't replace input validation.
@@ -1681,7 +1681,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 |---|---|---|---|---|---|
 | R-MQTT-ANON-001 | W1 | Pending | TBD | TBD | — |
 | R-MQTT-TLS-001 | W1 | Pending | TBD | TBD | — |
-| R-OPCUA-VALIDATE-001 | W1 | Pending | TBD | TBD | — |
+| R-OPCUA-VALIDATE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/opcua-endpoint-validator.test.js — 17 cases (12 reject, 3 accept, plus malformed/empty) |
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |
 | R-GRAFANA-PG-TLS-001 | W1 | Pending | TBD | TBD | — |
 | R-TIA-001 | W1 | Pending | TBD | TBD | — |

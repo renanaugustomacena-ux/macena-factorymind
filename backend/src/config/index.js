@@ -70,6 +70,9 @@ const schema = Joi.object({
   OPCUA_PASSWORD: Joi.string().allow('').default(''),
   OPCUA_SAMPLING_INTERVAL_MS: Joi.number().integer().min(100).default(1000),
   OPCUA_PUBLISHING_INTERVAL_MS: Joi.number().integer().min(100).default(1000),
+  // R-OPCUA-VALIDATE-001 — CSV allow-list of permitted endpoint hosts.
+  // Empty list means "no host allowed"; the bridge fails closed if enabled.
+  OPCUA_ALLOWED_HOSTS: Joi.string().allow('').default(''),
 
   MODBUS_ENABLED: Joi.boolean().default(false),
   MODBUS_TCP_HOST: Joi.string().allow('').default(''),
@@ -229,7 +232,8 @@ const config = Object.freeze({
     username: value.OPCUA_USERNAME,
     password: value.OPCUA_PASSWORD,
     samplingIntervalMs: value.OPCUA_SAMPLING_INTERVAL_MS,
-    publishingIntervalMs: value.OPCUA_PUBLISHING_INTERVAL_MS
+    publishingIntervalMs: value.OPCUA_PUBLISHING_INTERVAL_MS,
+    allowedHosts: value.OPCUA_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean)
   },
   modbus: {
     enabled: value.MODBUS_ENABLED,

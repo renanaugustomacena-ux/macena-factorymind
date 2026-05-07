@@ -38,6 +38,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const mqttHandler = require('./mqtt-handler');
 const topics = require('../mqtt/topics');
+const { validateOpcuaEndpoint } = require('./opcua-endpoint-validator');
 
 let client = null;
 let session = null;
@@ -51,6 +52,17 @@ async function start(tagMappings = []) {
   }
   if (!config.opcua.endpoint) {
     logger.warn('[opcua] no endpoint configured — not starting');
+    return;
+  }
+  // R-OPCUA-VALIDATE-001 — fail closed on attacker-controlled endpoints.
+  const validation = validateOpcuaEndpoint(config.opcua.endpoint, {
+    allowedHosts: config.opcua.allowedHosts
+  });
+  if (!validation.ok) {
+    logger.error(
+      { endpoint: config.opcua.endpoint, reason: validation.reason },
+      '[opcua] endpoint rifiutato dalla allow-list — bridge non avviato'
+    );
     return;
   }
   try {
