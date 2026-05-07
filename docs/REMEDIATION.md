@@ -1128,7 +1128,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** HANDOFF § 8 documents recommended `OTEL_TRACES_SAMPLER_ARG` per tier (Tier 2: 0.5; Tier 3: 0.2; Tier 4: 0.05).
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `HANDOFF.md` § 8.12 — "Observability — OTel sampling per tier" — ships a 4-row table mapping deployment tier (1 / 2 / 3 / 4) to estimated req/s and recommended `OTEL_TRACES_SAMPLER_ARG` (Tier 1: `1.0`; Tier 2: `0.5`; Tier 3: `0.2`; Tier 4: `0.05`). Sampler is `parentbased_traceidratio`; error-class spans always sampled (head-based decision overridden by `RecordException`). Includes per-environment override patterns (compose env var + k8s configmap live edit). Doctrine A-12 review cadence noted on the section.
 
 ### R-K8S-KYVERNO-001 — Install Kyverno + image-signature verification policy.
 
@@ -1161,7 +1161,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** `docs/customer-audits/` directory + `docs/customer-audits/_template.md`.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `docs/customer-audits/_template.md` — copyable template for customer security questionnaire responses (CAIQ Lite / ENISA SaaS / custom). Sections: metadata block (customer / contact / framework / tier / counsel review / sign-off), scope paragraph, response matrix (preserving customer's question numbering with Status + Evidence columns linking to HANDOFF / REMEDIATION / AUDIT / legal/), compensating controls, out-of-scope (H-16 perizia stays with perito), open follow-ups, multi-party sign-off. Doctrine references on the template: A-12 (annual cadence renewal), H-16, H-22.
 
 ### R-INFRA-GRAFANA-PLUGINS-001 — Pin Grafana plugin versions.
 
@@ -1250,7 +1250,7 @@ Each ticket below uses the canonical schema:
 - **Findings closed:** Doctrine **H-17**.
 - **Wave:** W3.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `docs/postmortems/_template.md` — operational copyable template extracted from the inline `HANDOFF.md` § 8.PM template. Section parity with HANDOFF: severity & duration / customer impact / timeline (UTC) / root cause (blameless per H-17) / what went well / what went poorly / action items (each linked to a REMEDIATION ticket) / lessons learned / multi-party sign-off (R-14: review by non-implementer). Header comment names the file path convention (`<YYYY-MM-DD>-<incident-tag>.md`) and the 5-business-day deadline post-resolution.
 
 ### R-RUNBOOK-DEPLOY-001 — Deployment-log runbook template.
 
@@ -1726,6 +1726,9 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-FRONTEND-NO-CONSOLE-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `frontend/eslint.config.cjs` flipped `'no-console'` from `['warn', { allow: ['warn', 'error', 'info'] }]` to `['error', { allow: ['error'] }]`. Pre-flip triage: `grep -rn "console\." frontend/src` returned 0 matches. Deferred-logger pattern documented inline (`__FM_ERROR_SINK` becomes the sink when the observability stream's frontend logger ships). |
 | R-LINT-TODO-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | One-shot triage outcome: `grep -rn "TODO\|FIXME" backend/src frontend/src` returned 0 matches at enable time — clean codebase. Both ESLint configs gain `'no-warning-comments': ['error', { terms: ['todo', 'fixme', 'xxx', 'hack'], location: 'anywhere' }]`. Backend Jest 340/340 + ESLint clean; frontend ESLint clean. Future TODO/FIXME comments fail the build until resolved or issue-linked. |
 | R-INFRA-USER-EXPLICIT-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | All 7 services in `docker-compose.yml` declare an explicit `user:` directive: postgres → postgres, influxdb → influxdb (UID 1000), mosquitto → mosquitto (UID 1883), backend → factorymind (matches Dockerfile:54), frontend → nginx (matches Dockerfile:68), grafana → grafana (UID 472), simulator → node (matches Dockerfile:15). Each entry carries an inline comment with upstream UID + source Dockerfile cross-reference. `docker-compose.yml` parses as valid YAML with 7 services. |
+| R-OTEL-SAMPLING-DOC-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `HANDOFF.md` § 8.12 — Observability — OTel sampling per tier. 4-row table mapping deployment tier (1 / 2 / 3 / 4) to estimated req/s and recommended `OTEL_TRACES_SAMPLER_ARG` (Tier 1: 1.0; Tier 2: 0.5; Tier 3: 0.2; Tier 4: 0.05). Sampler is `parentbased_traceidratio`; error-class spans always sampled. Per-environment override patterns documented (compose + k8s configmap). |
+| R-CUSTOMER-AUDIT-DIR-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `docs/customer-audits/_template.md` — customer security-questionnaire response template (CAIQ Lite / ENISA SaaS / custom). Sections: metadata + scope + response matrix (with Status + Evidence columns linking to HANDOFF / REMEDIATION / AUDIT / legal/), compensating controls, out-of-scope (H-16 perizia stays with perito), follow-ups, multi-party sign-off. Doctrine references: A-12 (annual cadence), H-16, H-22. |
+| R-RUNBOOK-PM-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `docs/postmortems/_template.md` — operational copyable template, parity with the inline HANDOFF § 8.PM template. Sections: severity & duration / customer impact / timeline / blameless root cause (H-17) / went well / went poorly / action items (each ticket-linked) / lessons learned / sign-off (with R-14 non-implementer review). Header comment names the file-path convention and 5-business-day deadline post-resolution. |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -2014,6 +2017,23 @@ Three W3 tickets closed — lint hygiene + docker-compose user pinning. All zero
 **W3 Verified added in batch F (3):** R-FRONTEND-NO-CONSOLE-001 (frontend ESLint `no-console: ['error', { allow: ['error'] }]` — F-LOW-CODE-003 closure), R-LINT-TODO-001 (backend + frontend ESLint `no-warning-comments` after triage finding 0 existing TODOs — F-LOW-CODE-004 + H-19 closure), R-INFRA-USER-EXPLICIT-001 (all 7 docker-compose services carry explicit `user:` directives — F-LOW-INFRA-001 closure).
 
 Backend Jest 340 / 340 (unchanged), backend ESLint clean (with the new no-warning-comments rule), frontend ESLint clean (with no-console: error + no-warning-comments), frontend tsc clean. docker-compose.yml YAML-valid. markdownlint 0, custom lint-docs.js 0 (4 allowlisted warnings unchanged).
+
+### v1.0.8 — W3 batch G (observability + audit-trail scaffolding) (2026-05-07)
+
+| Wave | Total | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 27 | 8 | 2 | 17 | 0 |
+| W3 | 34 | 26 | 0 | 8 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **90** | **45** | **6** | **39** | **0** |
+
+Three more W3 tickets closed — observability documentation + scaffolding directories for customer audits + postmortems. All doc-only, zero-risk for runtime behaviour. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+
+**W3 Verified added in batch G (3):** R-OTEL-SAMPLING-DOC-001 (HANDOFF § 8.12 with per-tier sampler-arg table — F-LOW-OBSERVABILITY-001 closure), R-CUSTOMER-AUDIT-DIR-001 (`docs/customer-audits/_template.md` — Audit Appendix N2 dependency closure), R-RUNBOOK-PM-001 (`docs/postmortems/_template.md` — H-17 doctrine closure, parity with HANDOFF § 8.PM).
+
+Backend Jest 340 / 340 (unchanged — batch G is doc-only). Backend ESLint, frontend ESLint + tsc clean. markdownlint 0, custom lint-docs.js 0 (4 allowlisted warnings unchanged). New files: `docs/customer-audits/_template.md`, `docs/postmortems/_template.md`. Modified: `docs/HANDOFF.md`.
 
 ---
 

@@ -1615,6 +1615,40 @@ This is materially harder than the failover itself; the default disposition is t
 
 **Doctrine references.** R-7 (wave drift sign-off — a DR event triggers a post-incident wave assessment), H-22 (quarterly review — DR runbook freshness), A-12 (doctrine review cadence applies to this runbook).
 
+### 8.12 Observability — OTel sampling per tier
+
+**Closes** R-OTEL-SAMPLING-DOC-001 (REMEDIATION § 7).
+
+The backend exports OpenTelemetry traces via `OTEL_EXPORTER_OTLP_ENDPOINT` (set in compose / k8s configmap). Trace volume scales linearly with request volume; without sampling, Tier 4 SaaS deployments exceed the budget of any reasonable OTel collector well before they exceed FactoryMind's own ingestion budget.
+
+The recommended `OTEL_TRACES_SAMPLER_ARG` per deployment tier:
+
+| Tier | Customer profile | Estimated req/s | Recommended sampler arg | Effective trace rate |
+|---|---|---|---|---|
+| 1 | Self-hosted, single facility | < 50 | `1.0` (sample all) | 100 % |
+| 2 | Single-tenant SaaS, ≤ 200 machines | 50 – 500 | `0.5` | 50 % |
+| 3 | Single-tenant SaaS, ≤ 1000 machines | 500 – 2 000 | `0.2` | 20 % |
+| 4 | Multi-tenant SaaS, > 1 000 machines | > 2 000 | `0.05` | 5 % |
+
+The sampler is `parentbased_traceidratio` (Vite + backend share the same trace ID once frontend OTel ships); the ratio applies only when no parent context is present. Error-class spans are always sampled (head-based sampling decision is overridden by `RecordException`).
+
+To override the default for an incident or capacity test:
+
+```bash
+# In compose
+OTEL_TRACES_SAMPLER_ARG=1.0 docker compose up factorymind-backend
+```
+
+```yaml
+# In k8s/configmap.yaml (live edit + rolling restart)
+data:
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+```
+
+The configmap value is consumed by `backend/src/otel.js` (initialised before any other module to ensure auto-instrumentation hooks attach correctly).
+
+**Doctrine reference.** A-12 (cadence review): the per-tier table is reviewed quarterly when actual req/s histograms diverge from the estimates above.
+
 ### 8.PM — Postmortem template
 
 ```markdown
