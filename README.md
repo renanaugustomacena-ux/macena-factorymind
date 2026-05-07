@@ -55,9 +55,16 @@ Returns: `{ status, service, version, uptime_seconds, time, dependencies: { post
 
 ## Documentation
 
-- [`docs/MODUS_OPERANDI.md`](docs/MODUS_OPERANDI.md) — strategic, technical, operational and commercial playbook (≥ 13 000 words).
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — data model, sequence diagrams, deployment topologies.
-- [`docs/API.md`](docs/API.md) — every REST endpoint with request / response schemas.
+The canonical FactoryMind documentation is the **four-document set** published as v1.0 baseline on 2026-05-07. Each document is dense (≥ 20 000 words), cross-referenced with stable anchors, reviewed quarterly.
+
+- [`docs/HANDOFF.md`](docs/HANDOFF.md) — Software Handoff & Operations Manual. Bilingual (IT + EN). 22 doctrine rules; full architecture, code map, operational lifecycle, API reference, data governance, SRE runbooks, compliance baseline, cross-product integration, glossary, bus-factor onboarding. ≈ 22 000 words.
+- [`docs/AUDIT.md`](docs/AUDIT.md) — Full-Sweep Audit. Independent technical assessment under NIST CSF 2.0 + MITRE ATT&CK ICS + OWASP API/IoT + IEC 62443-3-3 + CIS Controls v8 + AgID Misure Minime. 31 catalogued findings (7 Critical, 10 High, 11 Medium, 3 Low) with file:line evidence, CVSS scoring, MITRE technique mapping, reproduction commands, attack-tree analysis. ≈ 20 000 words.
+- [`docs/REMEDIATION.md`](docs/REMEDIATION.md) — Remediation Plan. 60+ remediation tickets in W0/W1/W2/W3/Continuous waves; each ticket carries exit criteria, regression test, blast radius, rollback plan, RACI, communication plan. ≈ 20 000 words.
+- [`docs/UPLIFT.md`](docs/UPLIFT.md) — Polishing & Excellence Plan. DORA Four Keys baseline + targets, Spotify Tech Radar, GreenMetrics-style Abstraction Ledger, five-track polish (DX / OX / Security / Commercial / Compliance), 30+ initiatives, 10 explicit anti-goals, 5-year horizon, customer-success cadence. ≈ 20 000 words.
+
+Plus the machine-readable [`docs/openapi.yaml`](docs/openapi.yaml) — canonical API specification, prose companion at HANDOFF § 6.
+
+The legacy documents (`MODUS_OPERANDI.md`, `ARCHITECTURE.md`, `API.md`, `ITALIAN-COMPLIANCE.md`, `DATA_GOVERNANCE.md`, `SLO.md`, `A11Y.md`) have been superseded and moved to [`docs/legacy/`](docs/legacy/) — see [`docs/legacy/README.md`](docs/legacy/README.md) for the supersession map.
 
 ## Piano Transizione 4.0 / 5.0 Eligibility
 
@@ -65,9 +72,11 @@ FactoryMind is engineered to satisfy the three "caratteristiche tecnologiche obb
 
 1. **Telematic interconnection** — OPC UA, Modbus TCP, or MQTT Sparkplug B to the factory MIS/ERP.
 2. **Automated data collection** — InfluxDB ingests every sample at 1 Hz or higher with guaranteed idempotency.
-3. **Integration with the corporate IT system** — a REST surface documented in `docs/API.md` and an ERP-oriented event feed.
+3. **Integration with the corporate IT system** — a REST surface documented in [`docs/HANDOFF.md`](docs/HANDOFF.md) § 6 and an ERP-oriented event feed.
 
-A one-time `T4.0 attestazione` report can be generated for each interconnected machine; refer to `docs/MODUS_OPERANDI.md` Part I §3 for the commercial model that accompanies this.
+A one-time `T4.0 attestazione` report can be generated for each interconnected machine; the regulatory baseline is documented in [`docs/HANDOFF.md`](docs/HANDOFF.md) § 9 (Compliance baseline) and [`docs/AUDIT.md`](docs/AUDIT.md) § 7 (legal & GDPR findings).
+
+The perizia tecnica giurata asseverata required ex art. 1, c. 11, della Legge 232/2016 e successive modifiche per investimenti superiori a € 300 000 remains the customer's perito's responsibility (HANDOFF doctrine **H-16**).
 
 ## License
 
