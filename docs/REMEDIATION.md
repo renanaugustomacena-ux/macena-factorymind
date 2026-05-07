@@ -1907,22 +1907,40 @@ Four W2 tickets closed the same day, ahead of the 2026-08-05 SLA, as a backend-h
 
 Test-suite growth: 182 → 249 (+67 from batch C: 11 safe-error + 8 influx-task + 33 mqtt-topics + 8 sparkplug-load + 3 health regression / 26 → 30 test suites). Backend ESLint clean, frontend ESLint + tsc clean (unchanged).
 
-### v1.0.5 — W2 batch D (W2 code-tractable wrap-up) (2026-05-07)
+### v1.0.5 — W2 batch D (W2 code-tractable wrap-up) + counting correction (2026-05-07)
 
-| Wave | Total tickets | Pending | In Progress | Verified | Closed |
+**Counting correction (post-batch-D doc-math audit).** The v1.0 baseline tables and every snapshot through v1.0.4 undercount the actual ticket inventory in §§ 6, 7. Re-count directly against the document headings (`grep -c "^### R-"` per section, excluding the `R-XYZ-NNN` template):
+
+| Wave | Baseline claim | Actual count | Delta |
+|---|---|---|---|
+| W1 | 19 | 19 | 0 |
+| W2 | 22 | 27 | +5 |
+| W3 | 12 | 34 | +22 |
+| Continuous | 10 | 10 | 0 |
+| **Total** | **63** | **90** | **+27** |
+
+The W2 underseat is 5 tickets present in § 6 but absent from the v1.0 baseline table: R-NPM-PROVENANCE-001, R-CI-PIN-001, R-RUNBOOK-DR-001, R-DR-DRILL-001, R-OWNER-001 (all carry `Wave: W2` in their definition). The W3 underseat is 22 tickets — the W3 section grew during v1.0 authoring while the baseline table was not refreshed. Earlier snapshots' delta math (e.g., "14 of 19 W1 Verified" in v1.0.1) is internally consistent and unaffected by this correction; only absolute totals were wrong, and the wrong totals were forward-propagated through v1.0.4 by inheritance. v1.0.5 is the first snapshot with verified counts.
+
+R-FRONTEND-BEARER-RETIRE-001 is referenced from § 5's R-FRONTEND-COOKIE-AUTH-001 verification note as a follow-on W2 ticket, but is not yet a `### R-FRONTEND-BEARER-RETIRE-001` heading in § 6 — it was anticipated during W1 dual-mode launch but not formalised. Filing the heading is itself a small W2 follow-up; tracked here, not opened as a separate ticket to avoid metadata churn.
+
+Corrected post-batch-D totals:
+
+| Wave | Total | Pending | In Progress | Verified | Closed |
 |---|---|---|---|---|---|
 | W0 | 0 | 0 | 0 | 0 | 0 |
 | W1 | 19 | 1 | 4 | 14 | 0 |
-| W2 | 22 | 7 | 2 | 13 | 0 |
-| W3 | 12 | 10 | 0 | 2 | 0 |
+| W2 | 27 | 11 | 2 | 14 | 0 |
+| W3 | 34 | 32 | 0 | 2 | 0 |
 | Continuous | 10 | 10 | 0 | 0 | 0 |
-| **Total** | **63** | **28** | **6** | **29** | **0** |
+| **Total** | **90** | **54** | **6** | **30** | **0** |
 
-Three W2 tickets closed the same day, ahead of the 2026-08-05 SLA, completing the code-tractable W2 surface (everything that doesn't require counsel / consultant / customer-coordination / large-effort dedicated work). Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+W2 verified count of 14 includes R-ADR-001, which was Verified by an earlier sweep (commit `94cf106 fix(docs-process): ADR directory + CI doc-lint + alert runbook anchors`) but not surfaced in any prior Appendix C snapshot until this correction. W3 verified 2 = R-FRONTEND-DEPS-CLEANUP-001 + R-FRONTEND-DEV-BIND-001 from batch A.
 
-**W2 Verified added (3):** R-K8S-NETPOL-001 (NetworkPolicy YAML — F-MED-001 closure), R-FRONTEND-i18n-001 (locale audit + 15 missing keys filled in en/de — F-MED-CODE-002 closure), R-ATTESTAZIONE-IDEMPOTENCY-001 (migration 008 + content_sha256 idempotency + cache hit / 409 / force=true — F-MED-DATA-003 closure).
+Three W2 tickets closed in batch D ahead of the 2026-08-05 SLA — completing the code-tractable W2 surface for tickets that don't require counsel / consultant / customer-coordination / large-effort dedicated work. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
 
-**W2 still Pending (7), all blocked by external coordination or scoped to other batches:**
+**W2 Verified added in batch D (3):** R-K8S-NETPOL-001 (NetworkPolicy YAML — F-MED-001 closure), R-FRONTEND-i18n-001 (locale audit + 15 missing keys filled in en/de — F-MED-CODE-002 closure), R-ATTESTAZIONE-IDEMPOTENCY-001 (migration 008 + content_sha256 idempotency + cache hit / 409 / force=true — F-MED-DATA-003 closure).
+
+**W2 still Pending (11) — block reason:**
 
 | Ticket | Block reason |
 |---|---|
@@ -1930,9 +1948,15 @@ Three W2 tickets closed the same day, ahead of the 2026-08-05 SLA, completing th
 | R-CRA-001 | Counsel — Reg. UE 2024/2847 applicability + OSS Stewardship Art. 24 |
 | R-A11Y-AUDIT-001 | External a11y consultant (axe-core CI + manual NVDA / VoiceOver / 200% / 400% zoom) |
 | R-LEGAL-SLA-ALIGN-001 | Counsel — contractual SLA vs engineering SLO drafting |
-| R-AUDIT-ASYNC-001 | Conditional — only if performance shows synchronous audit-log path is a bottleneck (no current evidence) |
-| R-PGBOUNCER-001 | L effort — dedicated batch E candidate (PgBouncer container + k8s deployment + load test) |
-| R-FRONTEND-BEARER-RETIRE-001 | Time-gated — post-W1 dual-mode cohabitation cycle (one release cycle of cookie + bearer dual-mode) |
+| R-AUDIT-ASYNC-001 | Conditional — only if a customer contractually requires guaranteed audit log |
+| R-PGBOUNCER-001 | L effort — dedicated batch candidate (PgBouncer container + k8s deployment + load test) |
+| R-NPM-PROVENANCE-001 | Code-tractable S effort — `npm audit signatures` step in `.github/workflows/ci.yml` |
+| R-CI-PIN-001 | Code-tractable S effort — pin all `uses:` to SHA in CI workflows |
+| R-RUNBOOK-DR-001 | Code-tractable M effort (doc-only) — DR runbook |
+| R-DR-DRILL-001 | M effort — first restore drill exercise |
+| R-OWNER-001 | Time-gated — depends on hire #2 onboarding |
+
+The remaining `R-FRONTEND-BEARER-RETIRE-001` follow-on is time-gated separately (post-W1 dual-mode cohabitation cycle).
 
 Test-suite growth: 249 → 340 (+91 from batch D: 70 i18n key audit + 10 k8s netpol structure + 10 attestazione idempotency (incl. 3 concurrency advisor-catch cases) + 1 i18n bundle JSON validity / 30 → 32 test suites). Backend ESLint clean, frontend ESLint + tsc clean. New file: `backend/src/db/migrations/008_attestazioni_idempotency.sql`.
 
