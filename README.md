@@ -71,6 +71,8 @@ The canonical FactoryMind documentation is the **four-document set** published a
 
 Plus the machine-readable [`docs/openapi.yaml`](docs/openapi.yaml) — canonical API specification, prose companion at HANDOFF § 6.
 
+If you are picking the project up on **Windows** to finish development, start at [`docs/WINDOWS-DEV-GUIDE.md`](docs/WINDOWS-DEV-GUIDE.md) — it walks the WSL2 + Docker Desktop setup, re-runs the v1.0.1 W1 integration gates on your machine, and then takes you through the four remaining external blockers (AWS Terraform apply, counsel sign-off on the TIA, first CD run, production cert-manager swap) plus the W2 backlog.
+
 The legacy documents (`MODUS_OPERANDI.md`, `ARCHITECTURE.md`, `API.md`, `ITALIAN-COMPLIANCE.md`, `DATA_GOVERNANCE.md`, `SLO.md`, `A11Y.md`) have been superseded and moved to [`docs/legacy/`](docs/legacy/) — see [`docs/legacy/README.md`](docs/legacy/README.md) for the supersession map.
 
 ## Piano Transizione 4.0 / 5.0 Eligibility
