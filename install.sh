@@ -258,26 +258,35 @@ ok "File .env scritto con permessi 600 (solo l'utente corrente lo legge)."
 # 6. Provisiona il password file Mosquitto (R-MQTT-ANON-001 / F-CRIT-001).
 #
 # allow_anonymous=false in mosquitto.conf richiede /mosquitto/config/passwd.
-# Lo generiamo via container effimero usando mosquitto_passwd dell'immagine
-# ufficiale, evitando di richiedere il pacchetto mosquitto-clients sull'host.
-# La rigenerazione avviene a ogni install.sh — coerente con la rigenerazione
-# di .env. I client MQTT (backend, simulatore) leggono la stessa password
+# Generiamo l'hash PBKDF2-SHA512 in Node (formato Mosquitto v2 `$7$...`)
+# invece di invocare mosquitto_passwd via docker run, perché:
+#   1. Niente dipendenza da `mosquitto-clients` sull'host.
+#   2. Niente problema di UID: il file viene scritto direttamente
+#      dall'utente che esegue install.sh; il broker (utente `mosquitto`
+#      dentro il container) lo legge perché 644.
+#   3. Hash ricevibili e verificati 1:1 da Mosquitto (PBKDF2-SHA512,
+#      1000 iter, 64-byte salt, 64-byte derived key — formato $7$).
+# I client MQTT (backend, simulatore) leggono la stessa password
 # da MQTT_USERNAME=backend / MQTT_PASSWORD nel .env.
 # ---------------------------------------------------------------------------
 log "Provisiono Mosquitto password file..."
 MQTT_USERNAME="${MQTT_USERNAME:-backend}"
 sed_replace MQTT_USERNAME "$MQTT_USERNAME"
 PASSWD_PATH="$SCRIPT_DIR/mosquitto/config/passwd"
-rm -f "$PASSWD_PATH"
-docker run --rm \
-  --user "$(id -u):$(id -g)" \
-  -v "$SCRIPT_DIR/mosquitto/config:/conf" \
-  -e MQTT_USERNAME="$MQTT_USERNAME" \
-  -e MQTT_PASSWORD="$MQTT_PASSWORD" \
-  eclipse-mosquitto:2 \
-  sh -c 'mosquitto_passwd -b -c /conf/passwd "$MQTT_USERNAME" "$MQTT_PASSWORD"' \
+node -e '
+  const crypto = require("crypto");
+  const user = process.argv[1];
+  const pwd = process.argv[2];
+  if (!user || !pwd) {
+    process.stderr.write("usage: node -e <script> <user> <password>\n");
+    process.exit(1);
+  }
+  const salt = crypto.randomBytes(64);
+  const hash = crypto.pbkdf2Sync(pwd, salt, 1000, 64, "sha512");
+  process.stdout.write(`${user}:$7$1000$${salt.toString("base64")}$${hash.toString("base64")}\n`);
+' "$MQTT_USERNAME" "$MQTT_PASSWORD" > "$PASSWD_PATH" \
   || die "Generazione mosquitto/config/passwd fallita."
-chmod 640 "$PASSWD_PATH" 2>/dev/null || true
+chmod 644 "$PASSWD_PATH"
 ok "Password file Mosquitto generato (utente=$MQTT_USERNAME)."
 
 # ---------------------------------------------------------------------------
