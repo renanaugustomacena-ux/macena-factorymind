@@ -9,9 +9,21 @@
 
 const crypto = require('crypto');
 
+// Pool stub: queue of { query, connect } responses. The route does
+// (1) pool.query for password-creds, (2) gdpr.eraseSubject which calls
+// pool.query for findUserByEmail then pool.connect for the transaction.
 const mockPoolQuery = jest.fn();
+const mockClientQuery = jest.fn();
+const mockClientRelease = jest.fn();
 jest.mock('../src/db/pool', () => ({
-  pool: { query: (...a) => mockPoolQuery(...a), end: jest.fn() }
+  pool: {
+    query: (...a) => mockPoolQuery(...a),
+    connect: jest.fn().mockImplementation(async () => ({
+      query: (...a) => mockClientQuery(...a),
+      release: mockClientRelease
+    })),
+    end: jest.fn()
+  }
 }));
 
 jest.mock('../src/middleware/auth', () => ({
@@ -63,7 +75,23 @@ function buildApp() {
 describe('DELETE /api/users/me (password re-auth)', () => {
   beforeEach(() => {
     mockPoolQuery.mockReset();
+    mockClientQuery.mockReset();
+    mockClientRelease.mockReset();
   });
+
+  // Wires the gdpr.eraseSubject transaction path: BEGIN → UPDATE → INSERT → COMMIT.
+  // The test asserts route behaviour; whether the service uses pool.query or a
+  // pool.connect()/transaction is an implementation detail.
+  function wireEraseTransaction({ updateRowCount }) {
+    mockClientQuery.mockImplementation(async (sql) => {
+      if (/BEGIN|COMMIT|ROLLBACK/i.test(sql)) return { rowCount: 0, rows: [] };
+      if (/UPDATE users[\s\S]*deletion_requested_at = NOW\(\)/i.test(sql)) {
+        return { rowCount: updateRowCount, rows: [] };
+      }
+      if (/INSERT INTO audit_log/i.test(sql)) return { rowCount: 1, rows: [] };
+      throw new Error(`unexpected client.query: ${sql}`);
+    });
+  }
 
   it('400 se manca password', async () => {
     const res = await request(buildApp())
@@ -106,8 +134,9 @@ describe('DELETE /api/users/me (password re-auth)', () => {
 
   it('200 + deletion_scheduled se password corretta + conferma esatta', async () => {
     mockPoolQuery
-      .mockResolvedValueOnce({ rows: [{ password_salt: SALT, password_hash: HASH }] })
-      .mockResolvedValueOnce({ rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ password_salt: SALT, password_hash: HASH }] }) // route password-creds lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'u-1', email: 'victim@example.com', deletion_requested_at: null }] }); // gdpr findUserByEmail
+    wireEraseTransaction({ updateRowCount: 1 });
 
     const res = await request(buildApp())
       .delete('/api/users/me')
@@ -115,12 +144,14 @@ describe('DELETE /api/users/me (password re-auth)', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('deletion_scheduled');
     expect(res.body.grace_period_days).toBe(30);
+    expect(mockClientRelease).toHaveBeenCalled();
   });
 
   it('409 se cancellazione già richiesta', async () => {
     mockPoolQuery
       .mockResolvedValueOnce({ rows: [{ password_salt: SALT, password_hash: HASH }] })
-      .mockResolvedValueOnce({ rowCount: 0 });
+      .mockResolvedValueOnce({ rows: [{ id: 'u-1', email: 'victim@example.com', deletion_requested_at: new Date() }] });
+    // gdpr.eraseSubject sees deletion_requested_at not null → throws ALREADY_ERASED before BEGIN.
 
     const res = await request(buildApp())
       .delete('/api/users/me')

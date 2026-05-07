@@ -182,6 +182,11 @@ GRAFANA_ADMIN_PASSWORD="$(rand_b64 24 20)"
 # usato per upsert di un admin reale con queste credenziali, disattivando
 # contemporaneamente il seed demo con password fissa di default.
 log "Calcolo hash scrypt della password admin..."
+# Formato `<salt_hex>:<hash_hex>` (vs. `scrypt$<salt_b64>$<hash_b64>`):
+# entrambi sono accettati da backend/src/services/admin-bootstrap.js, ma
+# il formato hex non contiene `$`, evitando che docker-compose lo
+# interpreti come riferimento a variabile in fase di parsing del .env
+# (es. `scrypt$AbC...` veniva risolto come variabile $AbC inesistente).
 ADMIN_PASSWORD_HASH="$(
   node -e '
     const crypto = require("crypto");
@@ -192,10 +197,10 @@ ADMIN_PASSWORD_HASH="$(
     }
     const salt = crypto.randomBytes(16);
     const key = crypto.scryptSync(pwd, salt, 64, { N: 16384, r: 8, p: 1 });
-    process.stdout.write("scrypt$" + salt.toString("base64") + "$" + key.toString("base64"));
+    process.stdout.write(salt.toString("hex") + ":" + key.toString("hex"));
   ' "$FM_ADMIN_PASSWORD"
 )" || die "Calcolo hash password fallito."
-ok "Hash password admin generato (scrypt N=16384 r=8 p=1 keylen=64)."
+ok "Hash password admin generato (scrypt N=16384 r=8 p=1 keylen=64, hex)."
 
 # ---------------------------------------------------------------------------
 # 5. Scrivi .env (backup se già esiste).

@@ -483,7 +483,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** revert; manual procedure in HANDOFF § 7.3 still works.
 - **Communication:** Privacy notice update (`legal/INFORMATIVA-PRIVACY-GDPR.md` already references the endpoints — verify wording matches).
 - **Effort:** L.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `backend/src/services/gdpr.js` exposes `exportSubject(pool, {email})`, `eraseSubject(pool, {email, reason})`, `finalizeErasures(pool, {now})`. `GET /api/users/me/export` and `DELETE /api/users/me` route handlers refactored to call the service so the operator-script and self-service paths share one implementation. `scripts/export-subject.sh` and `scripts/erase-subject.sh` are operator tools that `docker exec factorymind-backend node -e ...` into the running container; both carry usage text, error codes (64 = subject not found), and idempotent semantics. `erase-subject.sh` requires the typed confirmation `CANCELLA <email>` unless `FM_NON_INTERACTIVE=1` is set (parity with the route's password+confirm-string requirement). Coverage: 9 unit cases + live integration drill against the running stack — admin export round-trip clean, synthetic-user soft-erase verified via `SELECT … FROM users` showing `active=f` + `deletion_requested_at` populated, idempotent retry returns `already_erased` noop.
 
 ### R-FRONTEND-DOCKERFILE-USER-001 — Add `USER` directive to frontend nginx Dockerfile.
 
@@ -1689,7 +1689,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-CONTACT-ESCAPE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/contact-html-injection.test.js — asserts no `html:` field on nodemailer + text-only body + honeypot-before-sendMail |
-| R-GDPR-001 | W1 | Pending | TBD | TBD | — |
+| R-GDPR-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/gdpr-service.test.js (9 unit cases) + live ops drill: export-subject.sh dumps Art.15/20 JSON, exits 64 on missing subject; erase-subject.sh soft-deletes (deletion_requested_at populated, tokens revoked, audit row written), idempotent retry returns "already_erased" |
 | R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | Dockerfile-text unit asserts + live container: `docker exec factorymind-frontend whoami` → `nginx`; `curl -sI http://localhost:5173/` → HTTP/1.1 200 OK Server: nginx/1.29.8. Rewritten top-level nginx.conf with /tmp temp paths boots clean. |
 | R-K8S-DIGEST-001 | W1 | Pending | TBD | TBD | — |
 | R-SUPPLY-001 | W1+W2 | Pending | TBD | TBD | — |

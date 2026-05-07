@@ -28,6 +28,7 @@ const passwordPolicy = require('../middleware/passwordPolicy');
 const lockout = require('../middleware/lockout');
 const audit = require('../middleware/audit');
 const tokens = require('../services/auth-tokens');
+const gdpr = require('../services/gdpr');
 
 const router = Router();
 
@@ -249,41 +250,22 @@ router.get('/me/export', gdprLimiter, async (req, res, next) => {
   try {
     const userId = req.user?.sub;
     if (!userId) return sendProblem(res, 401, 'sessione non autenticata', req);
+    const email = req.user?.email;
+    if (!email) return sendProblem(res, 401, 'sessione senza email — re-autenticarsi', req);
 
-    const [userRow, auditRows, refreshRows] = await Promise.all([
-      pool.query(
-        `SELECT id, email, full_name, role, facility_scope, active,
-                created_at, password_changed_at, last_login_at, deletion_requested_at
-           FROM users WHERE id=$1`,
-        [userId]
-      ),
-      pool.query(
-        `SELECT action, resource_type, resource_id, ip_address, payload, created_at
-           FROM audit_log WHERE actor_user_id=$1 ORDER BY created_at DESC LIMIT 5000`,
-        [userId]
-      ),
-      pool.query(
-        `SELECT id, created_at, expires_at, consumed_at, revoked_at, user_agent, ip
-           FROM refresh_tokens WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1000`,
-        [userId]
-      )
-    ]);
-
-    const payload = {
-      export_generated_at: new Date().toISOString(),
-      export_format_version: '1.0',
-      legal_basis: 'Art. 15 e 20 Reg. UE 2016/679 (GDPR)',
-      user: userRow.rows[0] || null,
-      audit_log: auditRows.rows,
-      refresh_tokens: refreshRows.rows
-    };
+    const payload = await gdpr.exportSubject(pool, { email });
 
     res.set({
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="factorymind-export-${userId}.json"`
     });
     return res.send(JSON.stringify(payload, null, 2));
-  } catch (err) { return next(err); }
+  } catch (err) {
+    if (err && err.code === 'SUBJECT_NOT_FOUND') {
+      return sendProblem(res, 404, 'utente non trovato', req);
+    }
+    return next(err);
+  }
 });
 
 // ==========================================================================
@@ -328,17 +310,21 @@ router.delete('/me', gdprLimiter, async (req, res, next) => {
       return sendProblem(res, 401, 'password errata', req);
     }
 
-    const { rowCount } = await pool.query(
-      `UPDATE users
-          SET active = FALSE,
-              deletion_requested_at = NOW()
-        WHERE id = $1 AND deletion_requested_at IS NULL`,
-      [userId]
-    );
-    if (rowCount === 0) {
-      return sendProblem(res, 409, 'cancellazione già richiesta', req);
+    let result;
+    try {
+      result = await gdpr.eraseSubject(pool, {
+        email: req.user.email,
+        reason: 'gdpr_erasure_requested'
+      });
+    } catch (err) {
+      if (err && err.code === 'ALREADY_ERASED') {
+        return sendProblem(res, 409, 'cancellazione già richiesta', req);
+      }
+      if (err && err.code === 'SUBJECT_NOT_FOUND') {
+        return sendProblem(res, 404, 'utente non trovato', req);
+      }
+      throw err;
     }
-    await tokens.revokeAllForUser(pool, userId).catch(() => undefined);
 
     await audit.recordAuthEvent({
       action: 'DELETE /api/users/me',
@@ -351,8 +337,8 @@ router.delete('/me', gdprLimiter, async (req, res, next) => {
     });
 
     return res.json({
-      status: 'deletion_scheduled',
-      grace_period_days: 30,
+      status: result.status,
+      grace_period_days: result.grace_period_days,
       message:
         'Cancellazione programmata. Entro 30 giorni i dati saranno rimossi ' +
         'definitivamente. Per revocare la richiesta contatti il supporto.'
