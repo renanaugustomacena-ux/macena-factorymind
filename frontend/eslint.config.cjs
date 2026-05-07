@@ -47,7 +47,7 @@ module.exports = [
           destructuredArrayIgnorePattern: '^_'
         }
       ],
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
       'prefer-const': 'error',
       'no-var': 'error'

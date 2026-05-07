@@ -686,7 +686,7 @@ Each ticket below uses the canonical schema:
   - `frontend/vite.config.ts` `sourcemap: process.env.NODE_ENV !== 'production'` (or `'hidden'` mode).
   - Production build does not ship `.map` files.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/vite.config.ts` uses `defineConfig(({ mode }) => ({ ..., build: { sourcemap: mode !== 'production' } }))` — equivalent semantically to the exit criterion's `process.env.NODE_ENV !== 'production'` form but reliable in Vite v7 (the env var is applied after config load, so the verbatim form would emit maps even with `NODE_ENV=production` prefixed). Side-fix during the same sweep: tracked compiled artifacts `frontend/vite.config.js` + `vite.config.d.ts` (emitted by `tsc -b` via tsconfig.node.json's project reference) were shadowing the `.ts` source — Vite was loading the stale `.js` and silently ignoring `.ts` edits. Redirected emit to `node_modules/.cache/tsc-node` via `outDir` + `declarationDir` in `tsconfig.node.json`; `git rm` of stale tracked artifacts. Verification: `vite build` produces `dist/` with no `.map` files (`find dist -name "*.map"` empty); bundle size drops from 3.5 MB → 688 KB.
 
 ### R-FRONTEND-ERROR-001 — Suppress raw error.message in production ErrorBoundary.
 
@@ -697,7 +697,7 @@ Each ticket below uses the canonical schema:
 - **Exit criteria:**
   - `ErrorBoundary.tsx` shows generic message in production; raw error logged via `__FM_ERROR_SINK` (deferred to error-tracking sink).
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/src/components/ErrorBoundary.tsx` — the diagnostic `<pre>` now renders a generic Italian message in production (`import.meta.env.PROD ? 'Dettagli tecnici nascosti in produzione. La segnalazione è stata registrata.' : error.message`); raw error retained in dev for debugging ergonomics. The `__FM_ERROR_SINK` window hook in `componentDidCatch` (lines 30-34) was already in place from earlier work, so production telemetry continues to receive the full `Error` + `ErrorInfo` while the UI shows the generic message. Frontend `tsc --noEmit` + eslint clean.
 
 ### R-ERROR-SAFE-001 — Introduce safeInternal helper to prevent driver-text leakage.
 
@@ -761,7 +761,7 @@ Each ticket below uses the canonical schema:
   - `frontend/eslint.config.cjs` enables the rule.
   - `pages/Reports.tsx:38` cast removed.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/eslint.config.cjs:50` flipped `@typescript-eslint/no-explicit-any` from `'off'` to `'error'`. `frontend/src/pages/Reports.tsx` cast `(oeeQuery.data?.aggregate as any)` removed; replaced by a typed module-level `FALLBACK_OEE: OEEResult` constant (per advisor on the type-widening risk that the literal's `classification: 'insufficient-data'` would widen to `string` and fail the prop type without an explicit annotation). One-shot triage outcome: the Reports.tsx cast was the only `any` in `frontend/src/`; `./node_modules/.bin/eslint src --ext .ts,.tsx` returns 0 violations with the rule enabled (RC=0). Frontend `tsc --noEmit` clean.
 
 ### R-NIS2-SCOPE-001 — NIS2 scope determination + ACN registration if required.
 
@@ -996,7 +996,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** `npx depcheck` confirms no unused deps; `package.json` no longer lists `mqtt` or `socket.io-client`.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `npm uninstall mqtt socket.io-client` removed 47 packages cleanly (npm-driven lockfile regen, not hand-edited per advisor). `frontend/package.json` no longer lists either dependency. `grep -rn "from 'mqtt'\|from 'socket.io-client'" src` returns no matches. Honest gap (doctrine **H-20**): the exit criterion names `npx depcheck` as the verifier, but the autopilot guard rejected pulling depcheck as an undeclared external CLI; substitute evidence is the clean `tsc --noEmit` (no orphaned imports of the removed packages would compile) + the source grep. AUDIT signal F-LOW-CODE-001 was the canonical "these deps are unused" basis.
 
 ### R-FRONTEND-DEV-BIND-001 — Default Vite dev server to 127.0.0.1.
 
@@ -1006,7 +1006,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** `package.json` `dev` script binds to 127.0.0.1; cross-machine testing documented via `--host` flag override.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/vite.config.ts` `server.host: '127.0.0.1'` (was `'0.0.0.0'`). `frontend/package.json` `dev` script: `vite --port 5173` — no `--host` flag, so the config value applies. Cross-machine override: invoke as `npm run dev -- --host 0.0.0.0` for explicitly-needed cross-machine testing (CLI overrides config in Vite, which is exactly what makes the override work). Per advisor catch: the original DEV-BIND fix would have been a no-op had only the CLI flag been removed, because the pre-existing `vite.config.ts` `host: '0.0.0.0'` would still apply when CLI is absent; editing config and dev script together is what closes the gap. Out-of-scope-but-noted: the `preview` script still carries `--host 0.0.0.0` — F-LOW-CODE-002 names only the dev surface, so left for a follow-on sweep. Side-fix shared with R-FRONTEND-SOURCEMAP-001: stale tracked `vite.config.js` had `host: '0.0.0.0'` and was shadowing the `.ts` source; emit redirect (tsconfig.node.json `outDir: ./node_modules/.cache/tsc-node`) + `git rm` of stale artifacts resolved it.
 
 ### R-FRONTEND-NO-CONSOLE-001 — Tighten frontend ESLint console rule.
 
@@ -1708,6 +1708,11 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-COOKIE-BANNER-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `landing-page/index.html` ships `<aside id="cookieBanner">` Garante-compliant dialog (Linee guida 10 giugno 2021 — equal-prominence Accetto / Rifiuto buttons, link to cookie-policy, no scroll-block) + inline IIFE script with `factorymind_cookie_consent` localStorage persistence; `landing-page/styles.css` adds responsive styles. Persistence key matches legal/COOKIE-POLICY.md § 2.1 ("local storage, 12 months"). Banner is preventive — landing currently ships zero analytics / profiling cookies. |
 | R-LANDING-CONSENT-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | landing-page form gains required checkbox `name="privacy_consent"` with exit-criterion-verbatim Italian text + adjacent informativa-privacy link; backend Joi schema rejects payloads without strict `true`. Coverage: backend/tests/contact-consent.test.js (5 unit cases on the Joi rule) + backend/tests/contact-form.test.js extended with 2 integration-level rejection tests (missing flag, false flag). 16 / 16 contact tests green. |
 | R-i18n-HTML-LANG-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | frontend/src/i18n/useT.ts adds a `useEffect` that syncs `document.documentElement.lang` to the resolved active locale on every change. Idempotent across multiple useT() callers (the useMemo collapses preferredLocale + navigator.language to one of it/en/de). Browser-guarded with `typeof document !== 'undefined'`. Frontend tsc --noEmit clean. |
+| R-FRONTEND-SOURCEMAP-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `frontend/vite.config.ts` switched to function-form `defineConfig(({ mode }) => ({ ..., build: { sourcemap: mode !== 'production' } }))` because `process.env.NODE_ENV` is unset at config-evaluation time in Vite v7's pipeline (the env var is applied after config load). Side-fix during the same sweep: stale committed `vite.config.js` + `vite.config.d.ts` (emitted by `tsc -b` via tsconfig.node.json's project reference) were shadowing the `.ts`; redirected emit to `node_modules/.cache/tsc-node` via outDir/declarationDir in `tsconfig.node.json` + `git rm` of stale artifacts. `vite build` produces `dist/` with no `.map` files; bundle 3.5 MB → 688 KB. |
+| R-FRONTEND-ERROR-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `frontend/src/components/ErrorBoundary.tsx` — diagnostic `<pre>` gates raw `error.message` behind `import.meta.env.PROD ? 'Dettagli tecnici nascosti in produzione. La segnalazione è stata registrata.' : error.message`; `__FM_ERROR_SINK` window hook in `componentDidCatch` (already in place) continues to receive full Error + ErrorInfo for telemetry. Frontend tsc + eslint clean. |
+| R-FRONTEND-LINT-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `frontend/eslint.config.cjs:50` flipped `@typescript-eslint/no-explicit-any` from `'off'` to `'error'`; `frontend/src/pages/Reports.tsx` cast `(oeeQuery.data?.aggregate as any)` replaced by typed module-level `FALLBACK_OEE: OEEResult` constant. One-shot triage: only `any` in `frontend/src/` was the Reports.tsx cast; `eslint src` returns 0 violations (RC=0) with the rule enabled. |
+| R-FRONTEND-DEPS-CLEANUP-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `npm uninstall mqtt socket.io-client` removed 47 packages cleanly (npm-driven lockfile regen, not hand-edited per advisor). `frontend/package.json` no longer lists either; `grep -rn "from 'mqtt'\|from 'socket.io-client'" src` empty. Honest gap (doctrine **H-20**): exit criterion names `npx depcheck` as verifier but autopilot rejected pulling external CLI; substitute evidence is clean `tsc --noEmit` + grep. |
+| R-FRONTEND-DEV-BIND-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `frontend/vite.config.ts` `server.host: '127.0.0.1'` (was `'0.0.0.0'`); `frontend/package.json` `dev` script: `vite --port 5173` — no `--host` flag (config value applies when CLI is absent; CLI overrides config in Vite, hence the override works). Cross-machine override: `npm run dev -- --host 0.0.0.0`. Out-of-scope-but-noted: `preview` script still has `--host 0.0.0.0` (F-LOW-CODE-002 names dev only). Side-fix shared with SOURCEMAP-001: stale `vite.config.js` shadow had `host: '0.0.0.0'` and was overriding the `.ts`; emit redirect + git rm resolved. |
 | (remaining W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
@@ -1855,6 +1860,27 @@ Three additional W2 tickets closed the same day, ahead of their 2026-08-05 SLA, 
 **W2 Verified added (3):** R-COOKIE-BANNER-001 (landing-page Garante banner), R-LANDING-CONSENT-001 (GDPR consent checkbox + Joi-rejection regression-locked), R-i18n-HTML-LANG-001 (frontend `document.documentElement.lang` sync on locale change).
 
 **W2 still Pending (17):** R-K8S-NETPOL-001, R-FRONTEND-i18n-001, R-FRONTEND-SOURCEMAP-001, R-FRONTEND-ERROR-001, R-ERROR-SAFE-001, R-INFLUX-TASK-001, R-MQTT-TOPIC-VALIDATION-001, R-SPARKPLUG-LOAD-001, R-FRONTEND-LINT-001, R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-LEGAL-SLA-ALIGN-001, R-AUDIT-ASYNC-001 (conditional), R-ATTESTAZIONE-IDEMPOTENCY-001, R-PGBOUNCER-001, R-FRONTEND-BEARER-RETIRE-001 (post-W1-dual-mode-cycle).
+
+### v1.0.3 — W2 / W3 batch A (frontend hardening) (2026-05-07)
+
+| Wave | Total tickets | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 22 | 14 | 2 | 6 | 0 |
+| W3 | 12 | 10 | 0 | 2 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **63** | **35** | **6** | **22** | **0** |
+
+Five additional W2 / W3 tickets closed the same day, ahead of their respective SLAs (W2 → 2026-08-05; W3 → 2026-11-03), as a single-batch frontend-hardening pass with zero external dependencies. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift (forward closure does not require a sign-off entry beyond the per-ticket ledger row).
+
+**W2 Verified added (3):** R-FRONTEND-SOURCEMAP-001 (function-form config + emit-redirect side-fix), R-FRONTEND-ERROR-001 (production-gated diagnostic `<pre>`), R-FRONTEND-LINT-001 (`no-explicit-any: error` + typed `FALLBACK_OEE` replaces Reports.tsx `as any` cast).
+
+**W3 Verified added (2):** R-FRONTEND-DEPS-CLEANUP-001 (mqtt + socket.io-client removed; 47 packages dropped from lockfile), R-FRONTEND-DEV-BIND-001 (`server.host: '127.0.0.1'` + `dev` script no longer carries `--host`).
+
+**W2 still Pending (14):** R-K8S-NETPOL-001, R-FRONTEND-i18n-001, R-ERROR-SAFE-001, R-INFLUX-TASK-001, R-MQTT-TOPIC-VALIDATION-001, R-SPARKPLUG-LOAD-001, R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-LEGAL-SLA-ALIGN-001, R-AUDIT-ASYNC-001 (conditional), R-ATTESTAZIONE-IDEMPOTENCY-001, R-PGBOUNCER-001, R-FRONTEND-BEARER-RETIRE-001 (post-W1-dual-mode-cycle).
+
+**Side-fix discovered during the sweep.** Tracked compiled artifacts `frontend/vite.config.js` + `frontend/vite.config.d.ts` (emitted by `tsc -b` via `tsconfig.node.json`'s project reference) were shadowing the canonical `vite.config.ts` source — Vite v7 was loading the stale `.js` at config-evaluation time and silently ignoring `.ts` edits. Without redirecting emit (`outDir` + `declarationDir: ./node_modules/.cache/tsc-node` in tsconfig.node.json) and `git rm`-ing the stale artifacts, neither R-FRONTEND-SOURCEMAP-001 nor R-FRONTEND-DEV-BIND-001 would have taken effect at runtime regardless of source-level edits. This is now the canonical pattern for any TS-source config in this repo whose project-reference `tsconfig` carries `composite: true`.
 
 ---
 

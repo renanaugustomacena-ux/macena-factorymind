@@ -60,7 +60,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           browser.
         </p>
         <pre className="text-xs text-left bg-steel-50 rounded-md p-3 overflow-auto mb-6 max-h-48">
-          {error.message}
+          {import.meta.env.PROD
+            ? 'Dettagli tecnici nascosti in produzione. La segnalazione è stata registrata.'
+            : error.message}
         </pre>
         <div className="flex justify-center gap-3">
           <button
