@@ -282,7 +282,7 @@ FactoryMind exists in a constellation of sister projects: `macena-greenmetrics` 
 
 ### Rule H-11 — Open-source distribution and SaaS distribution are separate licensing surfaces.
 
-The repository is licensed MIT (`LICENSE` file at root). The Tier 2 / 3 / 4 commercial distributions (cfr. § 1.5) are licensed under separate commercial agreements (`legal/CONTRATTO-SAAS-B2B.md` for Tier 2/3, `legal/TERMINI-DI-SERVIZIO.md` for Tier 4 SaaS). The two licensing surfaces have different obligations under the EU Cyber Resilience Act (Reg. UE 2024/2847): the MIT-distributed self-hosted version is a candidate for the Open Source Software Stewardship exemption (Art. 24); the commercial Tier 2/3/4 are "products with digital elements" placed on the EU market and therefore in full CRA scope from 11 December 2027 (with vulnerability handling reporting from 11 September 2026). 
+The repository is licensed MIT (`LICENSE` file at root). The Tier 2 / 3 / 4 commercial distributions (cfr. § 1.5) are licensed under separate commercial agreements (`legal/CONTRATTO-SAAS-B2B.md` for Tier 2/3, `legal/TERMINI-DI-SERVIZIO.md` for Tier 4 SaaS). The two licensing surfaces have different obligations under the EU Cyber Resilience Act (Reg. UE 2024/2847): the MIT-distributed self-hosted version is a candidate for the Open Source Software Stewardship exemption (Art. 24); the commercial Tier 2/3/4 are "products with digital elements" placed on the EU market and therefore in full CRA scope from 11 December 2027 (with vulnerability handling reporting from 11 September 2026).
 
 **Why.** Treating "FactoryMind" as a single legal entity in the documentation collapses two materially different regulatory postures. A customer's legal counsel will ask, "Is this product CE-marked under the CRA?", and the answer differs depending on which distribution they are receiving. Honest documentation makes the distinction; misleading documentation triggers contract renegotiation late in a sales cycle.
 
@@ -707,6 +707,7 @@ Sparkplug B (when enabled) coexists with vanilla FactoryMind topics via the `spB
 Three deployment topologies are supported. Each carries a different security, latency, and operational-cost profile; the customer chooses based on their requirements.
 
 **Topology A — Single-tenant on-premise (Tier 2 customer's own hardware).**
+
 - All four backend tiers (broker, backend, Influx, Postgres, Grafana) run on a single industrial mini-PC in the customer's OT armadio.
 - TLS terminates at nginx on the same box (or at the customer's existing reverse proxy).
 - Backups: daily `pg_dump` + `influx backup` to a USB drive in the customer's office, weekly to off-site (customer's choice — Aruba Cloud, Microsoft OneDrive, Google Drive).
@@ -714,6 +715,7 @@ Three deployment topologies are supported. Each carries a different security, la
 - Recommended for: customers with strict OT/IT segmentation, no public internet in the production network, regulatory preference for on-premise data.
 
 **Topology B — Hybrid (broker + edge gateway on-prem; Influx, Postgres, Grafana, backend in EU cloud).**
+
 - Mosquitto broker + edge gateway (OPC UA / Modbus / Sparkplug bridges) at customer's premises.
 - Bridge to a cloud broker (Mosquitto on Aruba Cloud Milano, EMQX Cloud, or AWS IoT Core in eu-south-1).
 - Backend, Influx, Postgres, Grafana in EU cloud (Aruba Milano, OVHcloud Milano, AWS eu-south-1).
@@ -721,6 +723,7 @@ Three deployment topologies are supported. Each carries a different security, la
 - Recommended for: customers who want centralised analytics + multi-shift access without the operational burden of on-prem hosting.
 
 **Topology C — Multi-tenant SaaS (Tier 4 FactoryMind Cloud).**
+
 - EMQX cluster (3+ nodes) in eu-south-1.
 - InfluxDB Cloud Dedicated in eu-central-1 OR self-managed InfluxDB OSS multi-bucket.
 - Aurora PostgreSQL Serverless v2 with row-level security per tenant.
@@ -1053,6 +1056,7 @@ Sign-off: each checkpoint initialled by the verifier in the deployment-log runbo
 Routine cadence: quarterly. Triggers for immediate rotation: suspected compromise, employee departure with secrets access, security audit finding requiring rotation.
 
 **JWT secret rotation**:
+
 1. Generate new secret: `openssl rand -base64 48`.
 2. Update Secrets Manager: `aws secretsmanager update-secret --secret-id factorymind/prod --secret-string '{"JWT_SECRET":"<new>",...}'`.
 3. Restart backend pods: `kubectl rollout restart deployment factorymind-backend`.
@@ -1060,6 +1064,7 @@ Routine cadence: quarterly. Triggers for immediate rotation: suspected compromis
 5. Customer impact: users see a 401 within ≤ 15 min of rotation (next API call after cached access token expires); they re-login. Communicate proactively via in-app banner.
 
 **MQTT password rotation**:
+
 1. Generate new password.
 2. Update `mosquitto_passwd -b passwd backend <new-password>`.
 3. Reload broker: `mosquitto_passwd -U` (or restart container).
@@ -1067,6 +1072,7 @@ Routine cadence: quarterly. Triggers for immediate rotation: suspected compromis
 5. Edge gateways automatically reconnect with the new credentials (they read from their local Secrets Manager mirror or env file).
 
 **Influx token rotation**:
+
 1. Create new token in Influx with same permissions: `influx auth create --user factorymind-backend --read-bucket factory-telemetry --write-bucket factory-telemetry`.
 2. Update Secrets Manager.
 3. Restart backend pods.
@@ -1141,6 +1147,7 @@ The machine-readable canonical spec is `docs/openapi.yaml`. This section is the 
 The `trace_id` is the W3C `traceparent` header value; reporting an issue with the trace_id allows correlation to the backend's OpenTelemetry trace.
 
 **Rate limits**:
+
 - Global `/api/*`: 60 req/min/IP.
 - `POST /api/users/login`: 10 req/min/IP (defence-in-depth alongside lockout).
 - `GET /api/users/me/gdpr-export`, `DELETE /api/users/me`: 10 req/h/user (GDPR-specific).
@@ -1315,6 +1322,7 @@ The 13-month audit-log retention is the default per Provv. Garante 27 novembre 2
 DPA § 7 (`legal/DATA-PROCESSING-AGREEMENT.md`) requires the Responsabile (Renan) to notify the Titolare (Customer) within **24 hours** of becoming aware of a breach (tighter than GDPR's 72 h to Garante; gives the Titolare investigative margin).
 
 Notification content (per Art. 33 par. 3):
+
 1. Nature of the breach.
 2. Categories and approximate count of data subjects affected.
 3. Categories and approximate count of records affected.
@@ -1364,17 +1372,20 @@ Error-budget policy: Green (< 25 % spent) → ship freely; Yellow (25–75 %) �
 Each runbook below follows the canonical structure: **Symptom → Diagnosis → Mitigation → Escalation → Postmortem template**.
 
 <a id="h-runbook-factorymindapidown"></a>
+
 ### 8.3 Runbook — `FactoryMindAPIDown`
 
 **Symptom.** `up{job="factorymind-backend"} == 0` for 2 minutes. The backend's `/metrics` endpoint is unreachable from Prometheus. Pages on-call.
 
 **Diagnosis.**
+
 1. `kubectl get pods -n factorymind` — are the pods running?
 2. If running: `kubectl logs -n factorymind deploy/factorymind-backend --tail=200` — last log lines, look for crash patterns.
 3. If pods are crash-looping: check `kubectl describe pod` for the failure reason (OOM? config error? image pull?).
 4. If pods look healthy but `/metrics` is unreachable: check ingress / service routing.
 
 **Mitigation.**
+
 - OOM: `kubectl rollout restart deployment factorymind-backend`; if recurring, increase `limits.memory` (HPA + ticket for diagnosis).
 - Config error: revert the last config-related deploy; verify with the deployment-log runbook.
 - Image pull error: check GHCR connectivity; check image tag exists; check imagePullSecrets if using private registry.
@@ -1385,17 +1396,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Postmortem.** Within 5 working days. Template at § 8.PM.
 
 <a id="h-runbook-factorymindhigherrorrate"></a>
+
 ### 8.4 Runbook — `FactoryMindHighErrorRate`
 
 **Symptom.** 5xx rate > 1 % over 10 minutes. SLO-1 budget burning.
 
 **Diagnosis.**
+
 1. Grafana "Errors" dashboard → which routes are returning 5xx?
 2. Pino logs filtered by `level=error AND service=factorymind-backend`.
 3. Recent deploy correlation: any deploy in the last 30 min?
 4. Dependency check: PG / Influx / MQTT — are they healthy? `/api/health` envelope.
 
 **Mitigation.**
+
 - Recent-deploy regression: `kubectl rollout undo deployment factorymind-backend`. Verify error rate drops within 5 min.
 - DB issue: check Aurora dashboard; failover if primary instance is degraded.
 - Influx issue: check Influx server load; influx writer buffer should absorb transients.
@@ -1405,17 +1419,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Postmortem.** Required if budget burn > 5 %.
 
 <a id="h-runbook-factorymindlatencyburn"></a>
+
 ### 8.5 Runbook — `FactoryMindLatencyBurn`
 
 **Symptom.** P95 latency > 500 ms over 15 minutes. SLO-2 budget burning.
 
 **Diagnosis.**
+
 1. Grafana "API performance" dashboard → which routes?
 2. PG slow-query log (`auto_explain` enabled).
 3. Influx query duration (Grafana panel `factorymind_influx_query_duration_seconds`).
 4. Heap pressure correlation (Node.js GC pauses).
 
 **Mitigation.**
+
 - Slow PG query: add index, or rewrite query; emergency `EXPLAIN ANALYZE` and apply hint.
 - Influx slow: cardinality issue (REMEDIATION R-INFLUX-CARDINALITY-AUDIT-001 covers continuous monitoring).
 - Heap GC: scale horizontally (HPA), or restart pods.
@@ -1423,17 +1440,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Escalation.** Ticket; pager only if SLO budget Red.
 
 <a id="h-runbook-factorymindmqttdisconnected"></a>
+
 ### 8.6 Runbook — `FactoryMindMQTTDisconnected`
 
 **Symptom.** Backend `factorymind_mqtt_connected == 0` for 1 minute. Pages immediately because telemetry ingestion is paused.
 
 **Diagnosis.**
+
 1. Broker reachability: `mosquitto_sub -h <broker> -p 8883 -u <user> -P <pass> -t '$SYS/#' -W 5` — does the broker answer?
 2. Backend logs: `level=warn AND component=mqtt-handler` — last connect attempt, last error.
 3. Edge gateways: are they buffering (90-s store-and-forward)? Local Mosquitto status on each.
 4. Network: any firewall change? DNS resolution OK?
 
 **Mitigation.**
+
 - Broker down: `kubectl rollout restart statefulset mosquitto` (or restart container at the customer). Backend reconnects automatically with exponential backoff.
 - Auth failure (e.g., after credential rotation that the backend hasn't picked up): restart backend pods so they read updated Secrets Manager.
 - Network: coordinate with customer's IT.
@@ -1441,20 +1461,24 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Escalation.** If telemetry remains paused > 10 min: customer notice. Edge buffer covers ≈ 90 s; beyond that data loss is likely (telemetry is QoS 0, alarms are QoS 1 — the latter recover, the former are gone).
 
 <a id="h-runbook-factorymindinfluxwritefailures"></a>
+
 ### 8.7 Runbook — `FactoryMindInfluxWriteFailures`
 
 **Symptom.** Write-failure ratio > 0.1 % over 10 minutes. SLO-7 budget burning.
 
 **Diagnosis.**
+
 1. Influx server health.
 2. Buffer status: `factorymind_influx_buffer_size` — is the buffer full?
 3. Cardinality: `influx query 'cardinality(...)'` — has cardinality grown unexpectedly?
 
 **Mitigation.**
+
 - Influx server: check disk, restart if needed.
 - Cardinality blow-up: identify the misbehaving topic (typically a misconfigured device dumping high-entropy tag values); pause its ingestion via ACL.
 
 <a id="h-runbook-factorymindheappressure"></a>
+
 ### 8.8 Runbook — `FactoryMindHeapPressure`
 
 **Symptom.** Heap usage > 80 % of `--max-old-space-size` for 10 min.
@@ -1464,6 +1488,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Mitigation.** Pod restart relieves. Persistent root cause requires code fix.
 
 <a id="h-runbook-factorymindreadinessflap"></a>
+
 ### 8.9 Runbook — `FactoryMindReadinessFlap`
 
 **Symptom.** `/api/ready` flaps between 200 and 5xx > 6 times in 15 min.
@@ -1473,6 +1498,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Mitigation.** Address the flapping dependency; readiness-probe timeout tuning if appropriate.
 
 <a id="h-runbook-factorymindloginanomalies"></a>
+
 ### 8.10 Runbook — `FactoryMindLoginAnomalies`
 
 **Symptom.** > 10 failed logins per second.
@@ -1639,6 +1665,7 @@ At v1.0, Renan is the sole maintainer. Doctrine **H-5** requires bus factor ≥ 
 ### 12.2 Onboarding checklist for the first new engineer
 
 **Week 1 (reading + bootstrap):**
+
 - [ ] Read `HANDOFF.md` § 0–4 (cold-reader path).
 - [ ] Run `./install.sh` on a clean Ubuntu / macOS box. Reach the dashboard.
 - [ ] Read `AUDIT.md` § 4 (security findings) — understand the open risks.
@@ -1646,12 +1673,14 @@ At v1.0, Renan is the sole maintainer. Doctrine **H-5** requires bus factor ≥ 
 - [ ] First non-trivial commit: pick a Low-severity REMEDIATION ticket and ship it.
 
 **Week 2 (deeper dive):**
+
 - [ ] Read `HANDOFF.md` § 5–9.
 - [ ] Read `REMEDIATION.md` end-to-end. Pick a Medium ticket; pair with Renan on it.
 - [ ] Read `legal/` end-to-end (in Italian — bilingual reading is part of the role).
 - [ ] First customer-facing piece: shadow a customer support call.
 
 **End of Week 2 sign-off:**
+
 - The engineer can answer: where is the OEE math? what does install.sh do in unattended mode? what is the broker hardening posture in production? what is the GDPR breach-notification path?
 - If yes — pass; the engineer is added as a second owner to ≥ 3 modules in § 4.
 - If not — extend to Week 3 with focused study; revisit sign-off.
@@ -1795,4 +1824,3 @@ Stable file:line pointers used by [`AUDIT.md`](AUDIT.md), [`REMEDIATION.md`](REM
 ---
 
 **Made in Mozzecane (VR) — Veneto, Italy.**
-

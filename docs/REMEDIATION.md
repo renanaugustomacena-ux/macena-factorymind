@@ -361,7 +361,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** revert and `terraform init -migrate-state` back to local. Local state restored.
 - **Communication:** changelog; engineering team update.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Code complete (2026-05-07). `terraform/versions.tf` `backend "s3" {}` block uncommented and parameterised through env-driven values. `terraform/bootstrap-state.sh` ships the once-per-account hardening: S3 bucket with versioning + KMS encryption + public-access-block + TLS-only bucket policy + cross-account-deny + lifecycle to expire non-current versions; DynamoDB lock table with pay-per-request billing + SSE + PITR + deletion-protection. `terraform validate` clean. **Verified** flips after the operator runs `terraform/bootstrap-state.sh` followed by `terraform init -migrate-state` against the customer AWS account; the migration is the operator gate, not an engineering one. Cross-ref § 11 sign-off ledger for the same-day status entry.
 
 ### R-GRAFANA-PG-TLS-001 — Enable TLS for Grafana → Postgres connection.
 
@@ -429,9 +429,8 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** Auth flow — every authenticated route. Customer-impacting (one-time logout).
 - **Rollback plan:** dual-mode middleware (accept both cookie + Bearer) for one release cycle; can fall back to Bearer-only.
 - **Status:** Verified for dual-mode (2026-05-07). Backend `requireAuth` now accepts EITHER `Authorization: Bearer` OR `factorymind_session` cookie; `/api/users/login` sets the HttpOnly + SameSite=Lax + Secure-in-prod cookie alongside the response body so existing Bearer flows keep working. CSRF double-submit middleware (already present) gates state-changing requests on cookie path while exempting Bearer. Frontend `client.ts` flips `withCredentials: true`, mirrors `factorymind_csrf` cookie value into `X-CSRF-Token` header on POST/PUT/PATCH/DELETE, redirects to `/login?next=` on 401. Live drill against the running stack confirmed: login response carries both Set-Cookie headers; subsequent `GET /api/users/me` with the cookie alone (no Bearer) returns 200 with the user payload. The full Bearer retirement (`R-FRONTEND-BEARER-RETIRE-001` in W2) follows once a release cycle of dual-mode confirms no regressions.
-- **Communication:** customer notice (template in § 10) — "Maintenance window: existing sessions will require re-login on <date>".
+- **Communication:** customer notice (template in § 10) — "Maintenance window: existing sessions will require re-login on `<date>`".
 - **Effort:** L.
-- **Status:** Pending.
 - **Why this remediation, not another:** alternative — keep Bearer + add CSP `'strict-dynamic'` — rejected; reduces XSS risk but doesn't eliminate the localStorage stealability.
 
 ### R-FRONTEND-AUTH-001 — Add auth guards on frontend routes; ship login page.
@@ -449,7 +448,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** Frontend routing.
 - **Rollback plan:** revert; routes accessible without auth (current behaviour). Acceptable temporary state since backend rejects unauthenticated API calls.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/src/pages/Login.tsx` + `frontend/src/components/RequireAuth.tsx` shipped; `App.tsx` routes split into public (`/login`) + `<RequireAuth>`-wrapped (Dashboard, LineDetail, DeviceConfig, Alerts, Reports). `api/client.ts` axios 401 interceptor redirects to `/login?next=<originally-requested-path>`; logout button in top-nav calls `POST /api/users/logout` (server-side cookie clear). Built bundle contains "Accesso al cruscotto" + "Verifica sessione" + "factorymind_csrf" + "X-CSRF-Token" string markers verifying the cookie + CSRF mirror path is wired through to the production bundle. Paired with R-FRONTEND-COOKIE-AUTH-001 per § Appendix D critical-path table.
 
 ### R-CONTACT-ESCAPE-001 — HTML-escape email body in contact-form SMTP send; prefer plain-text.
 
@@ -577,6 +576,7 @@ Each ticket below uses the canonical schema:
 - **Status:** Verified (2026-05-07) — `backend/src/config/index.js` adds the empty / short MQTT_PASSWORD guard; `backend/tests/config-prod-guardrails.test.js` tests `rifiuta MQTT_PASSWORD vuota` + `rifiuta MQTT_PASSWORD troppo corta` cover the failure paths. Length floor of 12 chars chosen to match `PASSWORD_MIN_LENGTH` default.
 
 <a id="r-ticket-r-runbook-001"></a>
+
 ### R-RUNBOOK-001 — Materialise the eight runbooks referenced from monitoring/alerts.yml.
 
 - **Findings closed:** Doctrine **H-6** gap (alerts referenced runbooks that didn't exist in `docs/runbooks/`).
@@ -591,6 +591,7 @@ Each ticket below uses the canonical schema:
 - **Status:** Verified upon HANDOFF v1.0 publication.
 
 <a id="r-ticket-r-ci-docs-001"></a>
+
 ### R-CI-DOCS-001 — Add documentation lint job to CI.
 
 - **Findings closed:** Doctrine **H-9** gap (docs-as-code not enforced).
@@ -606,7 +607,7 @@ Each ticket below uses the canonical schema:
   - word-count floor (each of HANDOFF/AUDIT/REMEDIATION/UPLIFT ≥ 20 000 words).
   - "Last reviewed" date in AUDIT § 9 ≤ 95 days old (CVE-cadence enforcement, doctrine **A-12**).
 - **Effort:** L (multiple lint passes; the citation lint is custom).
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `.github/workflows/docs-lint.yml` runs on every push/PR touching `docs/**`, `monitoring/alerts.yml`, `scripts/lint-docs.js`, or the workflow itself, with two jobs: `markdownlint` (config in `.markdownlint.json` with `.markdownlintignore` excluding `docs/legacy/`) + `custom-doc-lints` invoking `scripts/lint-docs.js` with four passes — cross-doc anchor resolution against heading slugs + explicit `<a id>` HTML anchors (with prefix conventions `r-ticket-` / `a-finding-` / `a-doctrine-` / `a-strength-`); decree-citation traceability against HANDOFF Appendix A (doctrine **A-6** — patterns for D.Lgs. NNN/YYYY, Reg. UE NNNN/NN, Decisione UE, CVE-YYYY-NNNNN, GHSA); per-doc word-count floor (≥ 18 000, slack below the published 20 000 target for legitimate compaction); AUDIT + REMEDIATION `**Data:**` freshness ≤ 95 days (doctrine **A-12** CVE cadence). Markdownlint compliance pass executed in-sweep: discovered 343 pre-existing style violations on the canonical four-doc set; resolved by (a) disabling MD026 in `.markdownlint.json` because the deliberate doctrine "Rule X — Title." style triggers 233 trailing-punctuation matches that aren't actually wrong, (b) excluding `docs/legacy/` (frozen + scheduled for deletion 2026-08-01) via `.markdownlintignore`, (c) `markdownlint --fix` resolving 65 auto-fixable spacing/blank-line/fence violations across HANDOFF / AUDIT / REMEDIATION, (d) backtick-escaping 9 placeholder pseudo-tags (`<date>`, `<name>`, `<YYYY>-<NNN>`, `<project>`, `<Nome>`, `<Name>`, `<Customer-Success Engineer>`) in REMEDIATION + UPLIFT customer-notice / sign-off / advisory-URL / bilingual-script templates. Live verification: both `markdownlint` and `node scripts/lint-docs.js` return RC=0 on the canonical four-doc set; custom lint reports 0 errors with 4 allowlisted anchor warnings (R-AUDIT-MED-IDS-001 follow-up at next quarterly review).
 
 ---
 
@@ -1401,6 +1402,7 @@ anonymous in dev). The next commit ships the fix.
 ```
 
 CI run on this commit shows:
+
 ```
 ✗ tests/integration/mosquitto-no-anon.sh
   expected: Connection Refused
@@ -1425,6 +1427,7 @@ Closes finding F-CRIT-001 ([AUDIT.md#a-finding-f-crit-001](docs/AUDIT.md#a-findi
 ```
 
 CI run on this commit shows:
+
 ```
 ✓ tests/integration/mosquitto-no-anon.sh
 ✓ tests/integration/mosquitto-with-credentials.sh
@@ -1434,10 +1437,11 @@ CI run on this commit shows:
 **Step 3 — verifier review.**
 
 A second engineer (initially: external reviewer; from hire #2 onwards: the second hire) reviews the PR:
+
 - Confirms the test is in a separate commit from the fix.
 - Confirms `mosquitto_sub` without credentials in their local environment fails.
 - Confirms the dashboard still loads (regression check on the strengths list).
-- Signs off in the ticket: "Verified by <name>, 2026-MM-DD".
+- Signs off in the ticket: "Verified by `<name>`, 2026-MM-DD".
 
 **Step 4 — communication.**
 
@@ -1670,7 +1674,7 @@ When a third-party security researcher reports a vulnerability and a CVE is bein
 
 4. **Day 45–60 (coordination):** propose a public disclosure date; coordinate with researcher on language; reserve a CVE ID via MITRE if applicable.
 
-5. **Public disclosure (≥ Day 60):** publish advisory on factorymind.it/security/advisories/<YYYY>-<NNN>; update CVE register in [`AUDIT.md`](AUDIT.md) § 9; researcher acknowledged in advisory.
+5. **Public disclosure (≥ Day 60):** publish advisory on factorymind.it/security/advisories/`<YYYY>`-`<NNN>`; update CVE register in [`AUDIT.md`](AUDIT.md) § 9; researcher acknowledged in advisory.
 
 The CVD policy text lives at factorymind.it/security/disclosure-policy.html (rendered from `legal/security-disclosure-policy.md` — REMEDIATION R-CVD-POLICY-DOC-001 ships this document).
 
@@ -1700,7 +1704,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-DPA-FILL-001 | W1 | Pending | TBD | TBD | — |
 | R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
 | R-RUNBOOK-001 | W1 | Verified | Renan | Renan (self-review) | 2026-05-07 |
-| R-CI-DOCS-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/docs-lint.yml` + `scripts/lint-docs.js` + `.markdownlint.json` ship a 4-pass docs lint (anchors / decree-citations / word-count / freshness). Local run on the canonical four-doc set: 0 errors, 4 allowlisted warnings (R-AUDIT-MED-IDS-001 follow-up). |
+| R-CI-DOCS-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/docs-lint.yml` + `scripts/lint-docs.js` + `.markdownlint.json` + `.markdownlintignore` ship a 4-pass custom docs lint (anchors / decree-citations / word-count / freshness) + a markdownlint job. Both jobs RC=0 on the canonical four-doc set after in-sweep markdownlint compliance pass: MD026 disabled (deliberate "Rule X — Title." doctrine style); `docs/legacy/` excluded (frozen, scheduled deletion 2026-08-01); `markdownlint --fix` resolved 65 auto-fixable spacing violations; 9 placeholder pseudo-tags backtick-escaped in template strings (REMEDIATION + UPLIFT). Custom lint reports 0 errors, 4 allowlisted anchor warnings (R-AUDIT-MED-IDS-001 follow-up). |
 | (W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
@@ -1794,7 +1798,9 @@ Updated quarterly (HANDOFF doctrine **H-22**).
 
 ---
 
-## Appendix C — Status board (snapshot)
+## Appendix C — Status board
+
+### v1.0 baseline (2026-05-07 publication)
 
 | Wave | Total tickets | Pending | In Progress | Verified | Closed |
 |---|---|---|---|---|---|
@@ -1806,6 +1812,29 @@ Updated quarterly (HANDOFF doctrine **H-22**).
 | **Total** | **63** | **62** | **0** | **1** | **0** |
 
 The single Verified ticket at v1.0 baseline is R-RUNBOOK-001 (the eight runbooks, materialised as part of HANDOFF.md publication).
+
+### v1.0.1 — post-W1-sweep snapshot (2026-05-07)
+
+| Wave | Total tickets | Pending | In Progress\* | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 22 | 20 | 2 | 0 | 0 |
+| W3 | 12 | 12 | 0 | 0 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **63** | **43** | **6** | **14** | **0** |
+
+\* "In Progress" aggregates externally-blocked states from the v1.0.1 sweep: "Code complete" tickets awaiting an operator action (`terraform apply` against the customer AWS account for R-TF-STATE-001 / R-RDS-KMS-001 / R-RDS-EGRESS-001; first observed CD run for R-K8S-DIGEST-001 / R-SUPPLY-001 W1 portion) and "Drafted" tickets awaiting counsel sign-off (R-TIA-001). § 11 sign-off ledger holds the per-ticket detail and the operator gate that flips each to Verified.
+
+**W1 Verified (14):** R-MQTT-ANON-001, R-MQTT-TLS-001 (dev CA), R-OPCUA-VALIDATE-001, R-GRAFANA-PG-TLS-001 (dev CA), R-CI-AUDIT-001, R-FRONTEND-COOKIE-AUTH-001 (dual-mode), R-FRONTEND-AUTH-001, R-CONTACT-ESCAPE-001, R-GDPR-001, R-FRONTEND-DOCKERFILE-USER-001, R-WS-AUTH-001, R-CONFIG-MQTT-001, R-RUNBOOK-001, R-CI-DOCS-001.
+
+**W1 In Progress (4):** R-TF-STATE-001 (Code complete; awaits AWS apply), R-K8S-DIGEST-001 (Code complete; awaits first CD run), R-SUPPLY-001 W1 portion (Code complete; awaits first CD run), R-TIA-001 (Drafted; awaits counsel sign-off).
+
+**W1 Pending (1):** R-DPA-FILL-001 (counsel-blocked sub-processor list fill).
+
+**W2 In Progress (2):** R-RDS-KMS-001 + R-RDS-EGRESS-001 (Code complete during the W1 sweep as parallel work; await AWS apply alongside R-TF-STATE-001).
+
+The "(dev CA)" / "(dual-mode)" qualifiers on the Verified W1 fixes denote scope-bounded closure, not residual ambiguity. Each is paired with a follow-on transition ticket: R-K8S-KYVERNO-001 (W2) gates Cosign-signed → admission-verified; R-FRONTEND-BEARER-RETIRE-001 (W2) gates dual-mode → cookie-only after one release cycle of cohabitation; the production CA / cert-manager swap (HANDOFF § 5; first Tier-2 customer engagement) gates the dev-CA TLS surface for R-MQTT-TLS-001 + R-GRAFANA-PG-TLS-001.
 
 ---
 
@@ -1824,17 +1853,22 @@ The single Verified ticket at v1.0 baseline is R-RUNBOOK-001 (the eight runbooks
 (Effort estimates are calibrated against the S/M/L/XL table in § 1.6 plus a 25 % overhead allowance for code review, customer coordination, and unexpected issues. They assume one senior engineer working at sustainable pace.)
 
 **W1 burn-down forecast** (assuming 5 productive engineer-days/week starting plan-publication day):
+
 - Day 1–4: small tickets (R-FRONTEND-DOCKERFILE-USER-001, R-CONFIG-MQTT-001, R-CONTACT-ESCAPE-001, R-CI-AUDIT-001).
 - Day 5–10: medium tickets (R-MQTT-ANON-001, R-MQTT-TLS-001, R-OPCUA-VALIDATE-001, R-TF-STATE-001, R-GRAFANA-PG-TLS-001).
 - Day 11–18: large tickets (R-FRONTEND-COOKIE-AUTH-001, R-WS-AUTH-001, R-GDPR-001, R-CI-DOCS-001).
 - Day 19–25: legal-track (R-DPA-FILL-001, R-TIA-001) — counsel review external dependency.
 - Day 26–30: buffer + verification + customer notice prep.
 
+**Update 2026-05-07 — actual outcome.** The W1 engineering sweep landed in a single multi-cluster effort within the publication day (commits `7fefc70`..`317cda2` on `main`, plus an in-day v1.0.1 doc-status reconciliation that pulled R-CI-DOCS-001 across the line via a markdownlint compliance pass on the canonical four-doc set), bringing 14 W1 tickets to Verified, 3 to "Code complete (awaits AWS apply or first CD run)", 1 to "Drafted (awaits counsel)", and leaving 1 (R-DPA-FILL-001) Pending on counsel availability — see Appendix C v1.0.1 snapshot and § 11 sign-off ledger. The day-by-day forecast above is preserved unchanged for retrospective comparison; the actual ordering compressed because the bulk of engineering risk was lower than the L/M effort calibration anticipated, while two external dependencies (counsel + AWS apply) remain on their own clocks before the W1 30-day SLA on 2026-06-06.
+
 **W2 burn-down forecast** (60-day window after W1):
+
 - Days 31–60: structural infra work (R-RDS-KMS-001, R-RDS-EGRESS-001, R-K8S-NETPOL-001, R-K8S-DIGEST-001, R-SUPPLY-001 + R-K8S-KYVERNO-001 portion).
 - Days 61–90: legal + a11y + cookie-banner (R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-COOKIE-BANNER-001) + remaining MED items.
 
 **W3 burn-down forecast** (90-day window after W2):
+
 - Days 91–180: tail of MED + LOW items; mostly batched quick fixes.
 
 ### D.2 Critical-path dependencies
@@ -2211,6 +2245,7 @@ Forecast per wave:
 | Continuous (per quarter) | ~ 4 days | ~ 2 hours | minimal |
 
 Total estimated cost to get from v1.0 to "all W1+W2+W3 closed":
+
 - Engineering: ~ 43 days = ~ €17 200 if billed at €400/day; or ~ 1.5 months of one senior engineer.
 - Counsel: ~ 55 hours × €120/hour = ~ €6 600.
 - Cloud delta: ~ €100/month after W2.

@@ -723,10 +723,12 @@ The push triggers `cd.yml`. Watch it at `https://github.com/renanaugustomacena-u
 - **Docker Desktop resource limits.** Default Docker Desktop on Windows allocates ~50% of RAM to the WSL VM. Open Docker Desktop → Settings → Resources → Advanced and confirm CPU ≥ 4, Memory ≥ 8 GB. The simulator + 6 services genuinely need it.
 - **Port forwarding.** Docker Desktop forwards ports from the WSL VM to `localhost` on Windows automatically — no `wsl --proxy` dance needed. Browser access at `http://localhost:5173` Just Works.
 - **File watchers.** If you run `npm run dev` for the frontend, Vite's HMR uses inotify watchers. WSL2 has a default inotify cap that hits frontend projects fast. Bump it:
+
   ```bash
   echo 'fs.inotify.max_user_watches=524288' | sudo tee /etc/sysctl.conf
   sudo sysctl -p
   ```
+
 - **Antivirus interference.** Windows Defender / corporate AV scanning the Docker Desktop WSL VHDX file slows builds dramatically. Add `\\wsl$\Ubuntu-24.04\home\<your-user>\code` to the AV exclusion list (Settings → Update & Security → Windows Security → Virus & threat protection → Manage settings → Add or remove exclusions).
 - **Time drift.** Docker Desktop on Windows has occasional clock-drift bugs that break TLS-cert-validity checks. If `openssl s_client` says "certificate not yet valid", check `date` inside the container — if it's wildly off, `wsl --shutdown` from PowerShell + restart Docker Desktop fixes it.
 - **WSL2 backup.** Your work lives at `\\wsl$\Ubuntu-24.04\home\<user>\code\macena-factorymind`. The git remote is your backup; ensure you push frequently. Local Ubuntu can be re-installed in 10 minutes via `wsl --unregister Ubuntu-24.04 && wsl --install -d Ubuntu-24.04` if it ever corrupts.
