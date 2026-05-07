@@ -10,7 +10,12 @@ datasources:
     database: ${POSTGRES_DB}
     editable: false
     jsonData:
-      sslmode: disable
+      # R-GRAFANA-PG-TLS-001 (F-CRIT-005): force TLS on the Postgres link.
+      # `require` validates the encryption layer without verifying the
+      # server identity (acceptable in-cluster); `verify-ca` adds chain
+      # validation against the CA mounted at /etc/grafana/certs/ca.crt
+      # (recommended for cross-zone deployments).
+      sslmode: require
       postgresVersion: 1600
       timescaledb: false
       maxOpenConns: 25

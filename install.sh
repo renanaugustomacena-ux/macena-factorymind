@@ -274,6 +274,81 @@ ok "File .env scritto con permessi 600 (solo l'utente corrente lo legge)."
 # I client MQTT (backend, simulatore) leggono la stessa password
 # da MQTT_USERNAME=backend / MQTT_PASSWORD nel .env.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 5b. Genera la PKI di sviluppo (R-MQTT-TLS-001 + R-GRAFANA-PG-TLS-001).
+#
+# Una sola CA privata firma due certificati di servizio:
+#   - mosquitto-server.crt  (CN=factorymind-mosquitto, SAN per i nomi
+#                            che il backend e il simulatore usano in
+#                            docker-compose + 'localhost' per il test
+#                            esterno con `openssl s_client`).
+#   - postgres-server.crt   (CN=factorymind-postgres).
+#
+# La CA non è una vera CA: è autofirmata, valida 825 giorni, è il
+# trust-anchor del solo deployment dev. PRODUZIONE: sostituire i tre
+# file in mosquitto/certs/ + postgres/certs/ con cert firmati da una CA
+# riconosciuta (Let's Encrypt via cert-manager su k8s, o cert dei vostri
+# fornitori). Il path di sostituzione è documentato in HANDOFF § 5.
+# ---------------------------------------------------------------------------
+log "Genero PKI dev (CA + cert mosquitto + cert postgres)..."
+CERT_DIR_MOSQ="$SCRIPT_DIR/mosquitto/certs"
+CERT_DIR_PG="$SCRIPT_DIR/postgres/certs"
+mkdir -p "$CERT_DIR_MOSQ" "$CERT_DIR_PG"
+
+if [[ ! -f "$CERT_DIR_MOSQ/ca.crt" ]] || [[ ! -f "$CERT_DIR_MOSQ/server.crt" ]] || [[ ! -f "$CERT_DIR_PG/server.crt" ]]; then
+  CA_KEY="$(mktemp)"; CA_CRT="$(mktemp)"; SRV_KEY="$(mktemp)"; SRV_CSR="$(mktemp)"; SRV_CRT="$(mktemp)"
+  trap 'rm -f "$CA_KEY" "$CA_CRT" "$SRV_KEY" "$SRV_CSR" "$SRV_CRT"' EXIT
+
+  # CA root (ECDSA P-256: piccola, supportata ovunque, 825 giorni).
+  openssl ecparam -name prime256v1 -genkey -noout -out "$CA_KEY" 2>/dev/null
+  openssl req -new -x509 -days 825 -key "$CA_KEY" -out "$CA_CRT" \
+    -subj "/C=IT/ST=Veneto/L=Mozzecane/O=FactoryMind Dev CA/CN=FactoryMind Dev Root CA" \
+    -addext "basicConstraints=critical,CA:true" \
+    -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
+
+  # Helper: firma un cert server con SAN multipli.
+  sign_server_cert() {
+    local out_dir="$1" cn="$2" san="$3"
+    openssl ecparam -name prime256v1 -genkey -noout -out "$SRV_KEY" 2>/dev/null
+    openssl req -new -key "$SRV_KEY" -out "$SRV_CSR" \
+      -subj "/C=IT/ST=Veneto/L=Mozzecane/O=FactoryMind Dev/CN=$cn" 2>/dev/null
+    openssl x509 -req -in "$SRV_CSR" -CA "$CA_CRT" -CAkey "$CA_KEY" -CAcreateserial \
+      -out "$SRV_CRT" -days 825 -sha256 \
+      -extfile <(printf 'subjectAltName=%s\nextendedKeyUsage=serverAuth\nkeyUsage=critical,digitalSignature,keyEncipherment\n' "$san") \
+      2>/dev/null
+    cp "$CA_CRT"  "$out_dir/ca.crt"
+    cp "$SRV_KEY" "$out_dir/server.key"
+    cp "$SRV_CRT" "$out_dir/server.crt"
+  }
+
+  sign_server_cert "$CERT_DIR_MOSQ" \
+    "factorymind-mosquitto" \
+    "DNS:factorymind-mosquitto,DNS:localhost,IP:127.0.0.1"
+  sign_server_cert "$CERT_DIR_PG" \
+    "factorymind-postgres" \
+    "DNS:factorymind-postgres,DNS:localhost,IP:127.0.0.1"
+
+  # Permessi: i container Mosquitto (utente `mosquitto`) e Postgres
+  # (utente `postgres`) leggono i file con UID diverso da quello host.
+  # Per il dev (CA usa-e-getta) la chiave viene resa world-readable; il
+  # wrapper docker-compose Postgres copia poi la chiave in un percorso
+  # interno al container e la chmod 600 ad UID corretto, soddisfacendo
+  # la verifica di Postgres a runtime. PRODUZIONE: la chiave non viene
+  # mai world-readable — la sostituzione PKI documentata in HANDOFF § 5
+  # adotta cert-manager o equivalente e la chiave resta in un volume
+  # dedicato leggibile solo dal servizio.
+  chmod 755 "$CERT_DIR_MOSQ" "$CERT_DIR_PG"
+  chmod 644 "$CERT_DIR_MOSQ/server.key" "$CERT_DIR_PG/server.key" \
+            "$CERT_DIR_MOSQ/server.crt" "$CERT_DIR_MOSQ/ca.crt" \
+            "$CERT_DIR_PG/server.crt"  "$CERT_DIR_PG/ca.crt"
+
+  trap - EXIT
+  rm -f "$CA_KEY" "$CA_CRT" "$SRV_KEY" "$SRV_CSR" "$SRV_CRT"
+  ok "PKI dev generata (CA + cert mosquitto + cert postgres, validità 825 giorni)."
+else
+  ok "PKI dev già presente — riuso (cancelli mosquitto/certs/ + postgres/certs/ per rigenerare)."
+fi
+
 log "Provisiono Mosquitto password file..."
 MQTT_USERNAME="${MQTT_USERNAME:-backend}"
 sed_replace MQTT_USERNAME "$MQTT_USERNAME"

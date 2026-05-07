@@ -40,6 +40,8 @@ frontend/build/
 .env.*.local
 .env.backup.*
 mosquitto/config/passwd
+mosquitto/certs/
+postgres/certs/
 *.pem
 *.key
 *.crt

@@ -320,7 +320,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** revert; backend continues on plain MQTT/TCP. Previous behaviour preserved.
 - **Communication:** changelog; customer-facing documentation update (HANDOFF § 5.7 edge fleet hardening references this).
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified for dev (2026-05-07). install.sh new section 5b generates a single-purpose dev CA (ECDSA P-256, 825-day validity, autofirmata) plus signed leaf certs for mosquitto (CN=factorymind-mosquitto, SAN: factorymind-mosquitto/localhost/127.0.0.1) and postgres (CN=factorymind-postgres, SAN: factorymind-postgres/localhost/127.0.0.1). mosquitto.conf adds `listener 8883` with cafile/certfile/keyfile + `tls_version tlsv1.2`; docker-compose mounts `./mosquitto/certs:/mosquitto/certs:ro` and exposes 8883; backend MQTT_BROKER_URL prod-guard already enforces `mqtts://`. Live checks: `openssl s_client -connect localhost:8883` returns valid chain (CN=factorymind-mosquitto / issuer=FactoryMind Dev Root CA / validity 2026-2028); `mosquitto_sub --cafile … -p 8883 -u backend -P "$MQTT_PASSWORD"` returns broker uptime. **Production:** the dev CA is a throwaway and must be replaced — swap point documented inline in install.sh and mosquitto.conf comments + HANDOFF § 5.
 - **Why this remediation, not another:**
   - Alternative — TLS-PSK instead of certificate auth: rejected; certificate auth is the IEC 62443 SL-2 baseline.
 
@@ -377,7 +377,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** Grafana data source.
 - **Rollback plan:** revert; `sslmode: disable` restored.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified for dev (2026-05-07). Postgres image started via wrapper that copies the dev cert (mounted RO from `./postgres/certs`) into `/var/lib/postgresql/certs/`, sets `chmod 600` on `server.key`, and execs `postgres -c ssl=on -c ssl_cert_file=… -c ssl_key_file=… -c ssl_ca_file=…`. `grafana/provisioning/datasources/postgres.yml` flips `sslmode: disable` → `sslmode: require`. Live checks: `pg_stat_ssl` shows the connection is `ssl=t version=TLSv1.3 cipher=TLS_AES_256_GCM_SHA384`; Grafana datasource health endpoint `/api/datasources/uid/fm-postgres/health` returns `{"message":"Database Connection OK","status":"OK"}`. **Production:** for cross-zone deployments switch sslmode to `verify-ca` or `verify-full` and ship the real CA via cert-manager.
 
 ### R-TIA-001 — Produce Transfer Impact Assessment for InfluxData (US-Oregon) sub-processor; document supplementary measures.
 
@@ -1680,10 +1680,10 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | Ticket ID | Wave | Status | Implementer | Verifier | Date |
 |---|---|---|---|---|---|
 | R-MQTT-ANON-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | 3-gate integration: (1) `FM_UNATTENDED=1 ./install.sh` end-to-end clean (broker healthy after Node-PBKDF2 passwd generation, all 7 containers Healthy, backend `/api/health`→`status:ok` in 6 s); (2) `mosquitto_sub … no creds` → `Connection Refused: not authorised`; (3) `mosquitto_sub -u backend -P "$MQTT_PASSWORD" -t '$SYS/broker/uptime'` → broker uptime returned. |
-| R-MQTT-TLS-001 | W1 | Pending | TBD | TBD | — |
+| R-MQTT-TLS-001 | W1 | Verified (dev) | 2026-05-07 | 2026-05-07 | install.sh generates dev CA + signed server cert; mosquitto listener 8883 with TLS 1.2; openssl s_client returns valid chain; mqtts auth pub/sub returns broker uptime. Production: dev CA must be replaced (HANDOFF § 5 swap-point). |
 | R-OPCUA-VALIDATE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | 17 unit cases + live invocation inside `factorymind-backend` container: AWS-metadata IP literal `opc.tcp://169.254.169.254:4840/` returns `{ok:false, reason:"Host metadata-service vietato"}`; canonical `opc.tcp://plc01.factory.local:4840/` returns `{ok:true}`. |
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |
-| R-GRAFANA-PG-TLS-001 | W1 | Pending | TBD | TBD | — |
+| R-GRAFANA-PG-TLS-001 | W1 | Verified (dev) | 2026-05-07 | 2026-05-07 | postgres image started with `ssl=on`, cert paths via wrapper that copies/chmods at startup; `pg_stat_ssl` shows TLSv1.3 + TLS_AES_256_GCM_SHA384 cipher; Grafana datasource health endpoint returns "Database Connection OK" with `sslmode: require`. |
 | R-TIA-001 | W1 | Drafted | 2026-05-07 | — | legal/TIA-INFLUXDATA.md v0.9 (engineering draft, ~7000 words). Awaits counsel review of §§ 5.1, 5.4 + DPF self-certification verification. Flips to Verified after sign-off line is signed and `valid_through` populated. |
 | R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | YAML lint via backend/tests/ci-security-gates.test.js (5 cases) + live `npm audit --production --audit-level=high` on a `lodash@4.17.10` fixture exits with RC=1 / 1 critical severity vulnerability ("Command Injection in lodash"). Backend's own audit returns RC=0 (clean) — gate is calibrated. |
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |

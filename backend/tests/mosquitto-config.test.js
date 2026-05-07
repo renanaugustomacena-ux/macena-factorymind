@@ -63,4 +63,24 @@ describe('mosquitto.conf (R-MQTT-ANON-001)', () => {
     expect(aclText).toMatch(/^\s*user\s+backend\s*$/m);
     expect(aclText).toMatch(/^\s*topic\s+readwrite\s+factory\/#/m);
   });
+
+  // R-MQTT-TLS-001 (F-CRIT-002).
+  describe('TLS listener 8883 (R-MQTT-TLS-001)', () => {
+    it('declares listener 8883', () => {
+      expect(confLines.some((l) => /^\s*listener\s+8883\b/.test(l))).toBe(true);
+    });
+
+    it('points cafile / certfile / keyfile at /mosquitto/certs', () => {
+      const ca = confLines.find((l) => /^\s*cafile\s+/.test(l));
+      const crt = confLines.find((l) => /^\s*certfile\s+/.test(l));
+      const key = confLines.find((l) => /^\s*keyfile\s+/.test(l));
+      expect(ca).toMatch(/\/mosquitto\/certs\/ca\.crt/);
+      expect(crt).toMatch(/\/mosquitto\/certs\/server\.crt/);
+      expect(key).toMatch(/\/mosquitto\/certs\/server\.key/);
+    });
+
+    it('pins TLS to v1.2 minimum', () => {
+      expect(confLines.some((l) => /^\s*tls_version\s+tlsv1\.2/.test(l))).toBe(true);
+    });
+  });
 });
