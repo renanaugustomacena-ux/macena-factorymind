@@ -359,3 +359,86 @@ a:hover { color: var(--c-steel-900); }
   html { scroll-behavior: auto; }
   .btn, .btn:hover { transform: none; }
 }
+
+/* ============================================================ Form consent (R-LANDING-CONSENT-001) */
+.cta-form-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  font-size: .85rem;
+  line-height: 1.45;
+  color: var(--c-steel-700, #475569);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 0;
+  margin: 0;
+}
+.cta-form-consent input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: .15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--c-safety-500, #f97316);
+  cursor: pointer;
+}
+.cta-form-consent span { flex: 1 1 auto; }
+.cta-form-consent a {
+  color: var(--c-safety-600, #ea580c);
+  text-decoration: underline;
+}
+.cta-form-consent a:hover { color: var(--c-safety-700, #c2410c); }
+
+/* ============================================================ Cookie banner (R-COOKIE-BANNER-001) */
+.cookie-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 9999;
+  max-width: 56rem;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--c-steel-200, #cbd5e1);
+  border-radius: .75rem;
+  box-shadow: 0 16px 32px -16px rgba(15, 23, 42, .35);
+  padding: 1rem 1.25rem;
+}
+.cookie-banner[hidden] { display: none !important; }
+.cookie-banner-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.cookie-banner-text { flex: 1 1 24rem; min-width: 0; }
+.cookie-banner-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--c-steel-900, #0f172a);
+  margin: 0 0 .25rem;
+}
+.cookie-banner-desc {
+  font-size: .875rem;
+  line-height: 1.5;
+  color: var(--c-steel-600, #475569);
+  margin: 0;
+}
+.cookie-banner-desc a {
+  color: var(--c-safety-600, #ea580c);
+  text-decoration: underline;
+}
+.cookie-banner-desc a:hover { color: var(--c-safety-700, #c2410c); }
+.cookie-banner-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.cookie-banner-btn { min-width: 7rem; }
+
+@media (max-width: 540px) {
+  .cookie-banner { left: .5rem; right: .5rem; bottom: .5rem; padding: .75rem; }
+  .cookie-banner-actions { width: 100%; }
+  .cookie-banner-btn { flex: 1 1 0; min-width: 0; }
+}

@@ -67,9 +67,40 @@ describe('POST /api/contact', () => {
       .post('/api/contact')
       .send({
         nome: 'Mario Rossi', azienda: 'ACME Srl',
-        email: 'not-an-email', messaggio: 'messaggio lungo abbastanza 0123'
+        email: 'not-an-email', messaggio: 'messaggio lungo abbastanza 0123',
+        privacy_consent: true
       });
     expect(res.status).toBe(400);
+  });
+
+  // R-LANDING-CONSENT-001 (F-MED-LEGAL-006): integration path locks the
+  // schema-level rejection so a future regression cannot silently make the
+  // GDPR consent optional. The unit-level Joi rule lives in
+  // contact-consent.test.js.
+  it('respinge payload senza privacy_consent (400)', async () => {
+    const res = await request(freshApp())
+      .post('/api/contact')
+      .send({
+        nome: 'Mario Rossi', azienda: 'ACME Srl',
+        email: 'm@rossi.it', messaggio: 'messaggio lungo abbastanza 0123'
+        // privacy_consent intentionally omitted
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe('invalid');
+    // Joi's custom message for the privacy_consent rule (route lines ~70).
+    expect(res.body.message).toMatch(/consenso al trattamento dei dati/i);
+  });
+
+  it('respinge payload con privacy_consent=false (400)', async () => {
+    const res = await request(freshApp())
+      .post('/api/contact')
+      .send({
+        nome: 'Mario Rossi', azienda: 'ACME Srl',
+        email: 'm@rossi.it', messaggio: 'messaggio lungo abbastanza 0123',
+        privacy_consent: false
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe('invalid');
   });
 
   it('honeypot: website popolato → 200 silenzioso senza SMTP', async () => {
@@ -81,6 +112,7 @@ describe('POST /api/contact', () => {
         nome: 'Bot Spam', azienda: 'BotCo',
         email: 'bot@example.com',
         messaggio: 'Sono un bot, clicca qui www.sito-truffa.example',
+        privacy_consent: true,
         website: 'http://attacker.example.com/drop'
       });
     expect(res.status).toBe(200);
@@ -92,7 +124,8 @@ describe('POST /api/contact', () => {
       .post('/api/contact')
       .send({
         nome: 'Mario Rossi', azienda: 'ACME',
-        email: 'm@r.it', messaggio: 'testo messaggio abbastanza lungo'
+        email: 'm@r.it', messaggio: 'testo messaggio abbastanza lungo',
+        privacy_consent: true
       });
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('smtp_not_configured');
@@ -104,7 +137,8 @@ describe('POST /api/contact', () => {
       .post('/api/contact')
       .send({
         nome: 'Mario Rossi', azienda: 'ACME',
-        email: 'm@r.it', messaggio: 'testo messaggio abbastanza lungo'
+        email: 'm@r.it', messaggio: 'testo messaggio abbastanza lungo',
+        privacy_consent: true
       });
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('disabled');
@@ -116,7 +150,8 @@ describe('POST /api/contact', () => {
       .post('/api/contact')
       .send({
         nome: 'Mario Rossi', azienda: 'ACME',
-        email: 'm@rossi.it', messaggio: 'testo messaggio abbastanza lungo per passare Joi'
+        email: 'm@rossi.it', messaggio: 'testo messaggio abbastanza lungo per passare Joi',
+        privacy_consent: true
       });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');

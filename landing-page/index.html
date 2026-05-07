@@ -403,6 +403,14 @@
           </label>
           <!-- Honeypot anti-bot: invisibile e ignorato dall'utente. -->
           <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;" />
+          <!-- R-LANDING-CONSENT-001 (F-MED-LEGAL-006): consenso GDPR esplicito, opt-in, separabile. -->
+          <label class="cta-form-consent">
+            <input type="checkbox" name="privacy_consent" id="ctaPrivacyConsent" required />
+            <span>
+              Ho letto l'<a href="legal/informativa-privacy.html">informativa privacy</a>
+              e acconsento al trattamento dei dati per la richiesta di demo.
+            </span>
+          </label>
           <button type="submit" class="btn btn-primary btn-block" id="ctaSubmit">
             Richiedi la demo
           </button>
@@ -426,6 +434,10 @@
               }
               var payload = {};
               new FormData(form).forEach(function (v, k) { payload[k] = String(v); });
+              // R-LANDING-CONSENT-001: send the consent flag as a real boolean
+              // (FormData reports "on" for checkboxes; backend expects strict true).
+              var consentEl = form.elements.namedItem('privacy_consent');
+              payload.privacy_consent = !!(consentEl && consentEl.checked);
               submit.disabled = true;
               var original = submit.textContent;
               submit.textContent = 'Invio in corso...';
@@ -458,6 +470,67 @@
         </script>
       </div>
     </section>
+
+    <!-- ==================================================== COOKIE BANNER -->
+    <!-- R-COOKIE-BANNER-001 (F-MED-LEGAL-001):
+         Garante Linee guida 10 giugno 2021 — banner with equal-prominence
+         "Accetto" / "Rifiuto" buttons, link to cookie policy, persistent
+         choice in localStorage `factorymind_cookie_consent` (12 months,
+         documented in legal/COOKIE-POLICY.md § 2.1). The landing page
+         currently ships zero analytics / profiling cookies, so the banner
+         is preventive: when an analytics provider is later integrated
+         (R-AUDIT-MED-IDS-001-class follow-up), the consent recorded here
+         gates the loading of any non-strictly-technical cookie. -->
+    <aside id="cookieBanner" class="cookie-banner" role="dialog" aria-labelledby="cookieBannerTitle" aria-describedby="cookieBannerDesc" hidden>
+      <div class="cookie-banner-inner">
+        <div class="cookie-banner-text">
+          <h2 id="cookieBannerTitle" class="cookie-banner-title">Cookie e privacy</h2>
+          <p id="cookieBannerDesc" class="cookie-banner-desc">
+            Questo sito utilizza solo cookie tecnici essenziali al funzionamento.
+            Non raccogliamo dati analitici né di profilazione e non condividiamo
+            informazioni con terze parti. La sua scelta verrà ricordata per 12 mesi
+            nel local storage del browser.
+            <a href="legal/cookie-policy.html">Leggi la cookie policy</a>.
+          </p>
+        </div>
+        <div class="cookie-banner-actions">
+          <button type="button" class="btn btn-primary cookie-banner-btn" data-cookie-action="accept">Accetto</button>
+          <button type="button" class="btn btn-secondary cookie-banner-btn" data-cookie-action="reject">Rifiuto</button>
+        </div>
+      </div>
+    </aside>
+    <script>
+      (function () {
+        var STORAGE_KEY = 'factorymind_cookie_consent';
+        var banner = document.getElementById('cookieBanner');
+        if (!banner) return;
+        var stored = null;
+        try { stored = window.localStorage.getItem(STORAGE_KEY); } catch (e) { stored = null; }
+        if (!stored) {
+          banner.hidden = false;
+          banner.classList.add('cookie-banner-visible');
+        }
+        function record(choice) {
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+              choice: choice,
+              ts: new Date().toISOString(),
+              version: '1.0'
+            }));
+          } catch (e) {
+            // localStorage disabled (private browsing, full storage, blocked):
+            // banner stays dismissed for the session; user re-prompted next visit.
+          }
+          banner.hidden = true;
+          banner.classList.remove('cookie-banner-visible');
+        }
+        Array.prototype.forEach.call(banner.querySelectorAll('[data-cookie-action]'), function (btn) {
+          btn.addEventListener('click', function () {
+            record(btn.getAttribute('data-cookie-action'));
+          });
+        });
+      })();
+    </script>
 
     <!-- ========================================================== FOOTER -->
     <footer class="footer" role="contentinfo">

@@ -816,7 +816,7 @@ Each ticket below uses the canonical schema:
   - Consent stored in `factorymind_cookie_consent` localStorage (per Cookie Policy § 2.1).
   - `legal/COOKIE-POLICY.md` aligned.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `landing-page/index.html` ships an `<aside id="cookieBanner">` Garante-compliant dialog (Linee guida 10 giugno 2021 — equal-prominence "Accetto" / "Rifiuto" buttons, link to `legal/cookie-policy.html`, no scroll-blocking) before the closing `</body>`. Inline IIFE script: reads `factorymind_cookie_consent` from `window.localStorage`, shows the banner only on first visit; on click, persists `{choice, ts, version}` and dismisses. Persistence key matches `legal/COOKIE-POLICY.md` § 2.1 verbatim ("local storage, 12 months"). The landing page currently ships zero analytics / profiling cookies, so the banner is preventive: when an analytics provider is later integrated, the consent recorded here will gate any non-strictly-technical script. Styles in `landing-page/styles.css` (mobile-responsive, `prefers-reduced-motion` honoured).
 
 ### R-LANDING-CONSENT-001 — Add explicit GDPR consent checkbox to contact form.
 
@@ -829,7 +829,7 @@ Each ticket below uses the canonical schema:
   - Backend rejects submission without consent flag.
   - Privacy-notice link visible adjacent.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `landing-page/index.html` ships a `<label class="cta-form-consent">` block above the submit button with a required checkbox `name="privacy_consent"` and the exit-criterion-verbatim Italian text plus an inline link to `legal/informativa-privacy.html`. Form-submit JS reads the checkbox value via `form.elements.namedItem('privacy_consent').checked` and posts strict boolean (FormData would otherwise emit "on" or omit). Backend `backend/src/routes/contact.js` Joi schema gains `privacy_consent: Joi.boolean().valid(true).required()` with a user-facing Italian error message; `unknown(false)` already prevented bypass. Coverage: `backend/tests/contact-consent.test.js` (5 unit cases on the Joi rule) + `backend/tests/contact-form.test.js` extended with two integration-level rejection tests (missing flag, false flag). Test suite: 16 / 16 green.
 
 ### R-i18n-HTML-LANG-001 — Dynamic html lang attribute.
 
@@ -840,7 +840,7 @@ Each ticket below uses the canonical schema:
 - **Exit criteria:**
   - On locale change, `document.documentElement.lang` is updated.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/src/i18n/useT.ts` adds a `useEffect` that, when in a browser context (`typeof document !== 'undefined'`), syncs `document.documentElement.lang` to the resolved active locale on every change of `active`. The `useMemo` already collapses `preferredLocale` + `navigator.language` to one of `it` / `en` / `de` (or DEFAULT_LOCALE), so the side-effect is idempotent across multiple `useT()` callers. Frontend `tsc --noEmit`: clean.
 
 ### R-LEGAL-SLA-ALIGN-001 — Align contractual SLA + engineering SLO.
 
@@ -1705,7 +1705,10 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
 | R-RUNBOOK-001 | W1 | Verified | Renan | Renan (self-review) | 2026-05-07 |
 | R-CI-DOCS-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/docs-lint.yml` + `scripts/lint-docs.js` + `.markdownlint.json` + `.markdownlintignore` ship a 4-pass custom docs lint (anchors / decree-citations / word-count / freshness) + a markdownlint job. Both jobs RC=0 on the canonical four-doc set after in-sweep markdownlint compliance pass: MD026 disabled (deliberate "Rule X — Title." doctrine style); `docs/legacy/` excluded (frozen, scheduled deletion 2026-08-01); `markdownlint --fix` resolved 65 auto-fixable spacing violations; 9 placeholder pseudo-tags backtick-escaped in template strings (REMEDIATION + UPLIFT). Custom lint reports 0 errors, 4 allowlisted anchor warnings (R-AUDIT-MED-IDS-001 follow-up). |
-| (W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
+| R-COOKIE-BANNER-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `landing-page/index.html` ships `<aside id="cookieBanner">` Garante-compliant dialog (Linee guida 10 giugno 2021 — equal-prominence Accetto / Rifiuto buttons, link to cookie-policy, no scroll-block) + inline IIFE script with `factorymind_cookie_consent` localStorage persistence; `landing-page/styles.css` adds responsive styles. Persistence key matches legal/COOKIE-POLICY.md § 2.1 ("local storage, 12 months"). Banner is preventive — landing currently ships zero analytics / profiling cookies. |
+| R-LANDING-CONSENT-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | landing-page form gains required checkbox `name="privacy_consent"` with exit-criterion-verbatim Italian text + adjacent informativa-privacy link; backend Joi schema rejects payloads without strict `true`. Coverage: backend/tests/contact-consent.test.js (5 unit cases on the Joi rule) + backend/tests/contact-form.test.js extended with 2 integration-level rejection tests (missing flag, false flag). 16 / 16 contact tests green. |
+| R-i18n-HTML-LANG-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | frontend/src/i18n/useT.ts adds a `useEffect` that syncs `document.documentElement.lang` to the resolved active locale on every change. Idempotent across multiple useT() callers (the useMemo collapses preferredLocale + navigator.language to one of it/en/de). Browser-guarded with `typeof document !== 'undefined'`. Frontend tsc --noEmit clean. |
+| (remaining W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -1835,6 +1838,23 @@ The single Verified ticket at v1.0 baseline is R-RUNBOOK-001 (the eight runbooks
 **W2 In Progress (2):** R-RDS-KMS-001 + R-RDS-EGRESS-001 (Code complete during the W1 sweep as parallel work; await AWS apply alongside R-TF-STATE-001).
 
 The "(dev CA)" / "(dual-mode)" qualifiers on the Verified W1 fixes denote scope-bounded closure, not residual ambiguity. Each is paired with a follow-on transition ticket: R-K8S-KYVERNO-001 (W2) gates Cosign-signed → admission-verified; R-FRONTEND-BEARER-RETIRE-001 (W2) gates dual-mode → cookie-only after one release cycle of cohabitation; the production CA / cert-manager swap (HANDOFF § 5; first Tier-2 customer engagement) gates the dev-CA TLS surface for R-MQTT-TLS-001 + R-GRAFANA-PG-TLS-001.
+
+### v1.0.2 — W2 batch B (commercial-blocking landing) (2026-05-07)
+
+| Wave | Total tickets | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 22 | 17 | 2 | 3 | 0 |
+| W3 | 12 | 12 | 0 | 0 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **63** | **40** | **6** | **17** | **0** |
+
+Three additional W2 tickets closed the same day, ahead of their 2026-08-05 SLA, because they (a) require zero external dependencies (no counsel, no AWS, no production CA) and (b) gate first-paying-customer commercial cession independent of the W1 external-blocker chain. Doctrine R-7 sign-off recorded inline in § 11 ledger; not a wave drift (forward closure does not require a sign-off entry beyond the per-ticket ledger row).
+
+**W2 Verified added (3):** R-COOKIE-BANNER-001 (landing-page Garante banner), R-LANDING-CONSENT-001 (GDPR consent checkbox + Joi-rejection regression-locked), R-i18n-HTML-LANG-001 (frontend `document.documentElement.lang` sync on locale change).
+
+**W2 still Pending (17):** R-K8S-NETPOL-001, R-FRONTEND-i18n-001, R-FRONTEND-SOURCEMAP-001, R-FRONTEND-ERROR-001, R-ERROR-SAFE-001, R-INFLUX-TASK-001, R-MQTT-TOPIC-VALIDATION-001, R-SPARKPLUG-LOAD-001, R-FRONTEND-LINT-001, R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-LEGAL-SLA-ALIGN-001, R-AUDIT-ASYNC-001 (conditional), R-ATTESTAZIONE-IDEMPOTENCY-001, R-PGBOUNCER-001, R-FRONTEND-BEARER-RETIRE-001 (post-W1-dual-mode-cycle).
 
 ---
 

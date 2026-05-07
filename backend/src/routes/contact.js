@@ -61,6 +61,15 @@ const contactSchema = Joi.object({
   email: Joi.string().email().required(),
   telefono: Joi.string().max(30).allow('').optional(),
   messaggio: Joi.string().min(10).max(3000).required(),
+  // R-LANDING-CONSENT-001 (F-MED-LEGAL-006): GDPR consent must be
+  // explicit, opt-in, separable from other terms (Reg. UE 2016/679
+  // art. 7 + Considerando 32 + 42). Frontend ships an unchecked
+  // checkbox; backend rejects submissions where the consent flag
+  // isn't strictly true.
+  privacy_consent: Joi.boolean().valid(true).required().messages({
+    'any.only': 'Il consenso al trattamento dei dati è obbligatorio per la richiesta di demo.',
+    'any.required': 'Il consenso al trattamento dei dati è obbligatorio per la richiesta di demo.'
+  }),
   // Honeypot: campo invisibile nel form. Se popolato = bot.
   website: Joi.string().max(200).allow('').optional()
 }).unknown(false);
