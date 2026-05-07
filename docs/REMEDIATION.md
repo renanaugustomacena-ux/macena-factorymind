@@ -297,7 +297,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** `git revert <sha>`; previous `mosquitto.conf` carries `allow_anonymous true` and dev clients connect without auth.
 - **Communication:** changelog entry; no customer notice required (no Tier 2 customer deployed yet at the time of this fix).
 - **Effort:** M (≤ 1 day; the change itself is small but the install.sh wiring + test cover takes time).
-- **Status:** Verified (2026-05-07) — `mosquitto/config/mosquitto.conf` flips `allow_anonymous` to `false` and adds `password_file /mosquitto/config/passwd` + `acl_file /mosquitto/config/acl`. `install.sh` provisions the passwd file via a transient `eclipse-mosquitto:2` container running `mosquitto_passwd -b -c` (no host package required), running as the invoking user via `--user $(id -u):$(id -g)`. `docker-compose.yml` exposes `MQTT_USERNAME`/`MQTT_PASSWORD` to the broker and the healthcheck authenticates with them. README rewrites the Quick Start to point at `./install.sh` (the bare `docker compose up` path now fails by design at broker boot — anonymous publish is no longer reachable). `mosquitto/config/passwd` added to `.gitignore`. Coverage in `backend/tests/mosquitto-config.test.js` (5 cases). Integration shell test stubbed at `tests/integration/mosquitto-no-anon.sh` (ticket R-CI-INTEGRATION-001 wires it into CI).
+- **Status:** Code complete (2026-05-07); **integration verification pending — three gates**. `mosquitto/config/mosquitto.conf` flips `allow_anonymous` to `false` and adds `password_file /mosquitto/config/passwd` + `acl_file /mosquitto/config/acl`. `install.sh` provisions the passwd file via a transient `eclipse-mosquitto:2` container running `mosquitto_passwd -b -c` (no host package required), running as the invoking user via `--user $(id -u):$(id -g)`. `docker-compose.yml` exposes `MQTT_USERNAME`/`MQTT_PASSWORD` to the broker and the healthcheck authenticates with them. README rewrites the Quick Start to point at `./install.sh` (the bare `docker compose up` path now fails by design at broker boot — anonymous publish is no longer reachable). `mosquitto/config/passwd` added to `.gitignore`. Coverage in `backend/tests/mosquitto-config.test.js` (5 cases). Three integration gates required before flipping to Verified: (1) one full unattended `FM_UNATTENDED=1 ./install.sh` run on a clean machine to prove the new section 6 generates `mosquitto/config/passwd` correctly and the broker boots; (2) `mosquitto_sub -h localhost -p 1883 -t '$SYS/#' -W 5` (no creds) returns Connection Refused; (3) authenticated `mosquitto_sub -h localhost -p 1883 -u backend -P "$MQTT_PASSWORD" -t '$SYS/broker/uptime' -C 1 -W 5` succeeds. Integration shell test scaffolded at `tests/integration/mosquitto-no-anon.sh` (the file does not yet exist; ticket R-CI-INTEGRATION-001 wires it).
 - **Why this remediation, not another:**
   - Alternative 1 — keep `allow_anonymous true` and document explicit override for production: rejected because doctrine **H-1** clean-machine bootstrap should produce a hardened state by default.
   - Alternative 2 — use mTLS instead of password auth: deferred to W2 (R-MQTT-MTLS-001) for production; mTLS is harder to set up for a Tier 2 SME customer's dev environment.
@@ -339,7 +339,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** revert; previous behaviour (no validation) restored.
 - **Communication:** changelog.
 - **Effort:** S.
-- **Status:** Verified (2026-05-07) — pure validator extracted to `backend/src/services/opcua-endpoint-validator.js`; `opcua-bridge.js::start()` invokes it before `OPCUAClient.connect()` and refuses to start the bridge on reject (logs ERROR, backend continues without OPC UA per ticket exit criteria). `OPCUA_ALLOWED_HOSTS` added to Joi schema + `.env.example`. Coverage: `backend/tests/opcua-endpoint-validator.test.js` 17 cases including AWS/GCP/Alibaba metadata pivots, IPv6 loopback, RFC1918 IP-literal-as-allow-list bypass, and case-insensitive accept.
+- **Status:** Code complete (2026-05-07); **integration verification pending**. Pure validator extracted to `backend/src/services/opcua-endpoint-validator.js`; `opcua-bridge.js::start()` invokes it before `OPCUAClient.connect()` and refuses to start the bridge on reject (logs ERROR, backend continues without OPC UA per ticket exit criteria). `OPCUA_ALLOWED_HOSTS` added to Joi schema + `.env.example`. Coverage: `backend/tests/opcua-endpoint-validator.test.js` 17 cases including AWS/GCP/Alibaba metadata pivots, IPv6 loopback, RFC1918 IP-literal-as-allow-list bypass, and case-insensitive accept. Final Verified gate: end-to-end test booting the backend with a malicious `OPCUA_ENDPOINT` and confirming `connect()` is never reached — not yet run. Flip to Verified after staging boot.
 - **Why this remediation, not another:**
   - Alternative — DNS-only validation: rejected; doesn't block direct IP literals.
   - Alternative — outbound HTTP allow-list at the network layer: complementary, but doesn't replace input validation.
@@ -411,7 +411,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** CI workflow only.
 - **Rollback plan:** revert.
 - **Effort:** S.
-- **Status:** Verified (2026-05-07) — `.github/workflows/ci.yml` security job: `|| true` removed from both `npm audit` invocations; Trivy step pinned to `severity: HIGH,CRITICAL` + `exit-code: 1`; Gitleaks defaults to non-zero exit on detection. Regression coverage in `backend/tests/ci-security-gates.test.js` (5 cases) blocks future masking re-introduction per doctrine R-3.
+- **Status:** Code complete (2026-05-07); **integration verification pending**. `.github/workflows/ci.yml` security job: `|| true` removed from both `npm audit` invocations; Trivy step pinned to `severity: HIGH,CRITICAL` + `exit-code: 1`; Gitleaks defaults to non-zero exit on detection. Regression coverage in `backend/tests/ci-security-gates.test.js` (5 cases) blocks future masking re-introduction per doctrine R-3. Final Verified gate: ticket exit criterion calls for a vulnerable-dep fixture (e.g., `lodash@4.17.10`) running through the new gate and observing the build go red — not yet exercised. Flip to Verified after that PR is recorded.
 - **Why this remediation, not another:** alternative — `audit-level=critical` only — rejected; HIGH is the OWASP-recommended gate.
 
 ### R-FRONTEND-COOKIE-AUTH-001 — Migrate frontend JWT auth from localStorage to HttpOnly cookies.
@@ -500,7 +500,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** Frontend container.
 - **Rollback plan:** revert.
 - **Effort:** S.
-- **Status:** Verified (2026-05-07) — `frontend/Dockerfile` production stage rewrites the embedded nginx config to write PID + temp files to `/tmp` (the only directory the unprivileged `nginx` user can write), `chown`s `/usr/share/nginx/html` and `/var/cache/nginx` to `nginx:nginx`, then `USER nginx`. Listener already on port 5173 (no privileged-port concern).
+- **Status:** Code complete (2026-05-07); **integration verification pending**. `frontend/Dockerfile` production stage rewrites the embedded nginx config to write PID + temp files to `/tmp` (the only directory the unprivileged `nginx` user can write), `chown`s `/usr/share/nginx/html` and `/var/cache/nginx` to `nginx:nginx`, then `USER nginx`. Listener already on port 5173 (no privileged-port concern). Final Verified gate: `docker compose up factorymind-frontend` smoke + `docker exec factorymind-frontend whoami → nginx` + browser-load of `http://localhost:5173/` (rewritten top-level nginx.conf could regress an embedded path; not yet runtime-validated).
 
 ### R-K8S-DIGEST-001 — Use image digest pinning in k8s/deployment.yaml.
 
@@ -1679,18 +1679,18 @@ This section is the canonical status board. Updated by the verifier upon each ti
 
 | Ticket ID | Wave | Status | Implementer | Verifier | Date |
 |---|---|---|---|---|---|
-| R-MQTT-ANON-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/mosquitto-config.test.js — 5 cases (allow_anonymous false, no exec true line, password_file + acl_file directives, backend user in ACL) |
+| R-MQTT-ANON-001 | W1 | Code complete | 2026-05-07 | — | Conf-text unit asserts in backend/tests/mosquitto-config.test.js (5 cases). **Pending integration (3 gates):** (1) one full unattended `FM_UNATTENDED=1 ./install.sh` run on a clean machine to prove the new section 6 generates `mosquitto/config/passwd` correctly; (2) `mosquitto_sub -h localhost -p 1883 -t '$SYS/#' -W 5` returns Connection Refused; (3) authenticated `mosquitto_sub` succeeds. Mark Verified only after all three pass. |
 | R-MQTT-TLS-001 | W1 | Pending | TBD | TBD | — |
-| R-OPCUA-VALIDATE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/opcua-endpoint-validator.test.js — 17 cases (12 reject, 3 accept, plus malformed/empty) |
+| R-OPCUA-VALIDATE-001 | W1 | Code complete | 2026-05-07 | — | Pure-validator unit tests (17 cases) in backend/tests/opcua-endpoint-validator.test.js. **Pending integration:** end-to-end test that boots the backend with `OPCUA_ENABLED=true OPCUA_ENDPOINT=opc.tcp://169.254.169.254:4840 OPCUA_ALLOWED_HOSTS=plc01.factory.local` and confirms the bridge logs ERROR + does NOT call `OPCUAClient.connect()`. Mark Verified after observed in staging. |
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |
 | R-GRAFANA-PG-TLS-001 | W1 | Pending | TBD | TBD | — |
 | R-TIA-001 | W1 | Pending | TBD | TBD | — |
-| R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/ci-security-gates.test.js — 5 cases asserting no `\|\| true` masking + Trivy HIGH/CRITICAL exit-1 |
+| R-CI-AUDIT-001 | W1 | Code complete | 2026-05-07 | — | YAML lint via backend/tests/ci-security-gates.test.js (5 cases). **Pending integration:** vulnerable-dep fixture (`lodash@4.17.10`) running through CI to confirm the build actually fails. Mark Verified only after that PR is observed red. |
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-CONTACT-ESCAPE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/contact-html-injection.test.js — asserts no `html:` field on nodemailer + text-only body + honeypot-before-sendMail |
 | R-GDPR-001 | W1 | Pending | TBD | TBD | — |
-| R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/frontend-dockerfile.test.js — USER non-root assertion |
+| R-FRONTEND-DOCKERFILE-USER-001 | W1 | Code complete | 2026-05-07 | — | Dockerfile-text unit asserts in backend/tests/frontend-dockerfile.test.js. **Pending integration:** `docker compose up factorymind-frontend` and `docker exec factorymind-frontend whoami` returns `nginx`; SPA still loads at :5173 (the rewritten nginx.conf moves PID + temp paths to /tmp, which is not yet runtime-validated). Mark Verified only after that smoke. |
 | R-K8S-DIGEST-001 | W1 | Pending | TBD | TBD | — |
 | R-SUPPLY-001 | W1+W2 | Pending | TBD | TBD | — |
 | R-WS-AUTH-001 | W1 | Pending | TBD | TBD | — |
