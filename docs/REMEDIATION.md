@@ -1016,7 +1016,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** ESLint `no-console` allows only `error`; deferred logger documented.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `frontend/eslint.config.cjs` flipped `'no-console'` from `['warn', { allow: ['warn', 'error', 'info'] }]` to `['error', { allow: ['error'] }]` — only `console.error` is permitted in production frontend code. Pre-flip triage: `grep -rn "console\." frontend/src` returned 0 matches; the new rule has no existing violations to clear. Inline comment in the config documents the deferred-logger pattern: when the observability stream's frontend logger ships (UPLIFT roadmap), `__FM_ERROR_SINK` (already wired in `ErrorBoundary.tsx`) becomes the sink for any error-class console call. `eslint src --ext .ts,.tsx` returns RC=0.
 
 ### R-LINT-TODO-001 — Enforce no-warning-comments lint after one-shot triage.
 
@@ -1028,7 +1028,7 @@ Each ticket below uses the canonical schema:
   - One-shot triage: every existing TODO/FIXME either closed (issue link added) or removed (work done).
   - ESLint `no-warning-comments` enabled; `--max-warnings 0`.
 - **Effort:** M (triage takes time).
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). One-shot triage outcome: `grep -rn "TODO\|FIXME" backend/src frontend/src` returned 0 matches at enable time — no triage backlog to work through (the codebase has been kept clean already). `backend/eslint.config.js` and `frontend/eslint.config.cjs` both gain `'no-warning-comments': ['error', { terms: ['todo', 'fixme', 'xxx', 'hack'], location: 'anywhere' }]`. Going forward, any TODO / FIXME / XXX / HACK comment surfaces as a build error — the lint forces the author to either resolve the comment in-place or attach an explicit issue link. Backend Jest 340/340, backend ESLint RC=0, frontend ESLint RC=0 — the rule has no pre-existing violations to clear.
 
 ### R-INFRA-COMPOSE-HARDEN-001 — Add `read_only`, `cap_drop`, `no-new-privileges`, `mem_limit` to docker-compose services.
 
@@ -1050,7 +1050,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Low.
 - **Exit criteria:** Every service in `docker-compose.yml` declares `user:` matching the image's intended user.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). All 7 services in `docker-compose.yml` carry an explicit `user:` directive matching the image's intended non-root user: `factorymind-postgres` → `postgres` (already present pre-fix); `factorymind-influxdb` → `influxdb` (UID 1000 in 2.7-alpine); `factorymind-mosquitto` → `mosquitto` (UID 1883); `factorymind-backend` → `factorymind` (matches `backend/Dockerfile:54`); `factorymind-frontend` → `nginx` (matches `frontend/Dockerfile:68`, the R-FRONTEND-DOCKERFILE-USER-001 closure); `factorymind-grafana` → `grafana` (UID 472); `factorymind-simulator` → `node` (matches `iot-simulator/Dockerfile:15`). Each entry carries an inline comment naming the upstream UID and the source Dockerfile line for cross-reference. Verification: `docker-compose.yml` parses as valid YAML (`js-yaml` round-trip) with 7 services; visual scan confirms `user:` directive present in each service block.
 
 ### R-CDN-CERT-001 — ACM certificate for custom domain.
 
@@ -1723,6 +1723,9 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-NPM-PROVENANCE-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/ci.yml` security job gains two `npm audit signatures` steps (backend + frontend) with `--workspaces=false --include=dev`. Default behaviour fails build on missing / invalid Sigstore signatures. Pairs with the existing high-severity `npm audit` (R-CI-AUDIT-001) — vulnerability-freshness + supply-chain provenance enforced on every push. |
 | R-CI-PIN-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | All 37 `uses:` references across `ci.yml` / `cd.yml` / `docs-lint.yml` rewritten from mutable tag form to 40-char SHA form (`@<sha> # vX`). `aquasecurity/trivy-action@master` (most-exposed mutable ref — a branch tip the action's owner can move) pinned to `v0.36.0` `a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8`. SHAs resolved via `git ls-remote refs/tags/<tag>`. New `.github/dependabot.yml` enrols `github-actions` (weekly Mon 07:00 Europe/Rome) plus npm (backend / frontend / simulator), Docker, and Terraform ecosystems. Verification: `grep -c "@v[0-9]\|@master\|@main"` returns 0; SHA-pin grep returns 37; all 3 workflows parse as valid YAML. |
 | R-RUNBOOK-DR-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `HANDOFF.md` § 8.11 ships the DR runbook — pre-conditions inventory (Aurora cross-region replica, Influx Cloud sub-region replication, S3 CRR, Route 53 failover, operator AdministratorAccess, kubectl context) explicitly gates execution; 5-minute decision tree; failover procedure (`aws rds failover-global-cluster` + Helm endpoint switch + Route 53 cutover + PITR restore if needed); 7-item verification checklist (api/health, api/ready, attestazioni count delta, synthetic OEE within 0.1%, cosign signature verification, customer login continuity, Art. 33 / NIS2 notice trigger); rollback section: "failover is a one-way door under load". Pairs with R-DR-DRILL-001 for the first drill exercise. |
+| R-FRONTEND-NO-CONSOLE-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `frontend/eslint.config.cjs` flipped `'no-console'` from `['warn', { allow: ['warn', 'error', 'info'] }]` to `['error', { allow: ['error'] }]`. Pre-flip triage: `grep -rn "console\." frontend/src` returned 0 matches. Deferred-logger pattern documented inline (`__FM_ERROR_SINK` becomes the sink when the observability stream's frontend logger ships). |
+| R-LINT-TODO-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | One-shot triage outcome: `grep -rn "TODO\|FIXME" backend/src frontend/src` returned 0 matches at enable time — clean codebase. Both ESLint configs gain `'no-warning-comments': ['error', { terms: ['todo', 'fixme', 'xxx', 'hack'], location: 'anywhere' }]`. Backend Jest 340/340 + ESLint clean; frontend ESLint clean. Future TODO/FIXME comments fail the build until resolved or issue-linked. |
+| R-INFRA-USER-EXPLICIT-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | All 7 services in `docker-compose.yml` declare an explicit `user:` directive: postgres → postgres, influxdb → influxdb (UID 1000), mosquitto → mosquitto (UID 1883), backend → factorymind (matches Dockerfile:54), frontend → nginx (matches Dockerfile:68), grafana → grafana (UID 472), simulator → node (matches Dockerfile:15). Each entry carries an inline comment with upstream UID + source Dockerfile cross-reference. `docker-compose.yml` parses as valid YAML with 7 services. |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -1994,6 +1997,23 @@ Three more W2 tickets closed ahead of the 2026-08-05 SLA. With this batch the W2
 The remaining R-FRONTEND-BEARER-RETIRE-001 follow-on is time-gated separately (post-W1 dual-mode cohabitation cycle) and not yet a `### R-` heading in § 6.
 
 Backend ESLint clean (unchanged from v1.0.5 — batch E touches CI / docs only). Frontend ESLint + tsc clean (unchanged). Backend Jest 340 / 340 (unchanged). New files: `.github/dependabot.yml`. Modified: `.github/workflows/{ci,cd,docs-lint}.yml`, `docs/HANDOFF.md`.
+
+### v1.0.7 — W3 batch F (lint hygiene + docker-compose user pinning) (2026-05-07)
+
+| Wave | Total | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 27 | 8 | 2 | 17 | 0 |
+| W3 | 34 | 29 | 0 | 5 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **90** | **48** | **6** | **36** | **0** |
+
+Three W3 tickets closed — lint hygiene + docker-compose user pinning. All zero-risk: existing source had no console / TODO / FIXME violations to clear; user pinning matches the upstream Dockerfile USER directives that were already in place. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+
+**W3 Verified added in batch F (3):** R-FRONTEND-NO-CONSOLE-001 (frontend ESLint `no-console: ['error', { allow: ['error'] }]` — F-LOW-CODE-003 closure), R-LINT-TODO-001 (backend + frontend ESLint `no-warning-comments` after triage finding 0 existing TODOs — F-LOW-CODE-004 + H-19 closure), R-INFRA-USER-EXPLICIT-001 (all 7 docker-compose services carry explicit `user:` directives — F-LOW-INFRA-001 closure).
+
+Backend Jest 340 / 340 (unchanged), backend ESLint clean (with the new no-warning-comments rule), frontend ESLint clean (with no-console: error + no-warning-comments), frontend tsc clean. docker-compose.yml YAML-valid. markdownlint 0, custom lint-docs.js 0 (4 allowlisted warnings unchanged).
 
 ---
 

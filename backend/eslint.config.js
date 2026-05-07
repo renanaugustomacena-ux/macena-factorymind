@@ -30,6 +30,15 @@ module.exports = [
         }
       ],
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      // R-LINT-TODO-001 — F-LOW-CODE-004 + doctrine H-19 closure.
+      // Triage outcome: `grep -rn "TODO\\|FIXME" backend/src` returned 0
+      // matches at enable time. Going forward, any TODO/FIXME/XXX/HACK
+      // surfaces as a build error — the lint forces the author to either
+      // resolve the comment or attach an issue link inline.
+      'no-warning-comments': ['error', {
+        terms: ['todo', 'fixme', 'xxx', 'hack'],
+        location: 'anywhere'
+      }],
       'eqeqeq': ['error', 'smart'],
       'no-return-await': 'error',
       'no-throw-literal': 'error',
