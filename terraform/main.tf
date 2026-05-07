@@ -86,23 +86,23 @@ resource "aws_iot_policy" "device" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["iot:Connect"]
+        Effect   = "Allow"
+        Action   = ["iot:Connect"]
         Resource = "arn:aws:iot:${var.aws_region}:*:client/$${iot:Connection.Thing.ThingName}"
       },
       {
-        Effect = "Allow"
-        Action = ["iot:Publish"]
+        Effect   = "Allow"
+        Action   = ["iot:Publish"]
         Resource = "arn:aws:iot:${var.aws_region}:*:topic/factory/*"
       },
       {
-        Effect = "Allow"
-        Action = ["iot:Subscribe"]
+        Effect   = "Allow"
+        Action   = ["iot:Subscribe"]
         Resource = "arn:aws:iot:${var.aws_region}:*:topicfilter/factory/*"
       },
       {
-        Effect = "Allow"
-        Action = ["iot:Receive"]
+        Effect   = "Allow"
+        Action   = ["iot:Receive"]
         Resource = "arn:aws:iot:${var.aws_region}:*:topic/factory/*"
       }
     ]
@@ -124,23 +124,68 @@ resource "aws_db_subnet_group" "postgres" {
   subnet_ids = aws_subnet.private[*].id
 }
 
+# R-RDS-EGRESS-001 (F-HIGH-004): scoped egress, matches modules/db/main.tf.
+# This top-level SG mirrors the module variant for the legacy flat layout
+# customers; new deployments compose modules/db/. The two SGs converge on
+# the same egress allow-list so a future `terraform state mv` to the
+# module path doesn't trigger a re-create.
 resource "aws_security_group" "postgres" {
   name        = "${var.project_name}-pg-sg"
   description = "Restrict access to FactoryMind RDS"
   vpc_id      = aws_vpc.main.id
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    cidr_blocks     = [var.vpc_cidr]
-    description     = "Intra-VPC"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "Intra-VPC"
   }
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "DNS UDP (in-VPC resolver)"
   }
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "DNS TCP (in-VPC resolver)"
+  }
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_prefix_list.s3_main.id]
+    description     = "S3 backups"
+  }
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.kms_main.id]
+    description     = "KMS unwrap"
+  }
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cw_logs_main.id]
+    description     = "CloudWatch Logs"
+  }
+}
+
+data "aws_prefix_list" "s3_main" {
+  name = "com.amazonaws.${data.aws_region.current_main.name}.s3"
+}
+data "aws_region" "current_main" {}
+data "aws_ec2_managed_prefix_list" "kms_main" {
+  name = "com.amazonaws.${data.aws_region.current_main.name}.kms"
+}
+data "aws_ec2_managed_prefix_list" "cw_logs_main" {
+  name = "com.amazonaws.${data.aws_region.current_main.name}.logs"
 }
 
 resource "random_password" "postgres" {
@@ -172,13 +217,13 @@ resource "aws_rds_cluster" "postgres" {
 }
 
 resource "aws_rds_cluster_instance" "postgres" {
-  count               = 1
-  cluster_identifier  = aws_rds_cluster.postgres.id
-  instance_class      = "db.serverless"
-  engine              = aws_rds_cluster.postgres.engine
-  engine_version      = aws_rds_cluster.postgres.engine_version
+  count                = 1
+  cluster_identifier   = aws_rds_cluster.postgres.id
+  instance_class       = "db.serverless"
+  engine               = aws_rds_cluster.postgres.engine
+  engine_version       = aws_rds_cluster.postgres.engine_version
   db_subnet_group_name = aws_db_subnet_group.postgres.name
-  publicly_accessible = false
+  publicly_accessible  = false
 }
 
 # ---------------------------------------------------- Secrets (Secrets Manager)
@@ -190,11 +235,11 @@ resource "aws_secretsmanager_secret" "factorymind" {
 resource "aws_secretsmanager_secret_version" "factorymind" {
   secret_id = aws_secretsmanager_secret.factorymind.id
   secret_string = jsonencode({
-    DATABASE_URL     = "postgresql://factorymind:${random_password.postgres.result}@${aws_rds_cluster.postgres.endpoint}:5432/factorymind"
-    INFLUX_URL       = var.influx_cloud_url
-    INFLUX_TOKEN     = ""       # populate via external secret management
-    MQTT_BROKER_URL  = "mqtts://${data.aws_iot_endpoint.current.endpoint_address}:8883"
-    JWT_SECRET       = random_password.postgres.result # replace with a distinct secret
+    DATABASE_URL    = "postgresql://factorymind:${random_password.postgres.result}@${aws_rds_cluster.postgres.endpoint}:5432/factorymind"
+    INFLUX_URL      = var.influx_cloud_url
+    INFLUX_TOKEN    = "" # populate via external secret management
+    MQTT_BROKER_URL = "mqtts://${data.aws_iot_endpoint.current.endpoint_address}:8883"
+    JWT_SECRET      = random_password.postgres.result # replace with a distinct secret
   })
 }
 

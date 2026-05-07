@@ -14,7 +14,10 @@ terraform {
 
 variable "project_name" { type = string }
 variable "environment" { type = string }
-variable "cidr" { type = string, default = "10.60.0.0/16" }
+variable "cidr" {
+  type = string
+  default = "10.60.0.0/16"
+}
 variable "tags" { type = map(string), default = {} }
 
 data "aws_availability_zones" "available" { state = "available" }
