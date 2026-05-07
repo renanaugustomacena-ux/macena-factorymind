@@ -573,7 +573,7 @@ Each ticket below uses the canonical schema:
   - `backend/src/config/index.js` lines 113–145 production guardrails add: `if (isProduction && !value.MQTT_PASSWORD) forbidden.push('MQTT_PASSWORD must be set in production')`.
   - `backend/tests/config-prod-guardrails.test.js` adds the corresponding test.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — `backend/src/config/index.js` adds the empty / short MQTT_PASSWORD guard; `backend/tests/config-prod-guardrails.test.js` tests `rifiuta MQTT_PASSWORD vuota` + `rifiuta MQTT_PASSWORD troppo corta` cover the failure paths. Length floor of 12 chars chosen to match `PASSWORD_MIN_LENGTH` default.
 
 ### R-RUNBOOK-001 — Materialise the eight runbooks referenced from monitoring/alerts.yml.
 
@@ -1695,7 +1695,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-SUPPLY-001 | W1+W2 | Pending | TBD | TBD | — |
 | R-WS-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-DPA-FILL-001 | W1 | Pending | TBD | TBD | — |
-| R-CONFIG-MQTT-001 | W1 | Pending | TBD | TBD | — |
+| R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
 | R-RUNBOOK-001 | W1 | Verified | Renan | Renan (self-review) | 2026-05-07 |
 | R-CI-DOCS-001 | W1 | Pending | TBD | TBD | — |
 | (W2 + W3 tickets continued) | ... | ... | ... | ... | ... |

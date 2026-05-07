@@ -130,6 +130,11 @@ if (value.APP_ENV === 'production') {
   if (value.MQTT_BROKER_URL && !/^mqtts|wss/i.test(value.MQTT_BROKER_URL)) {
     forbidden.push('MQTT_BROKER_URL deve usare TLS in produzione (mqtts:// o wss://).');
   }
+  // R-CONFIG-MQTT-001: F-MED-005 — empty MQTT_PASSWORD in production allows
+  // anonymous publish if the broker is misconfigured. Pair with H-2 + R-MQTT-ANON-001.
+  if (!value.MQTT_PASSWORD || value.MQTT_PASSWORD.length < 12) {
+    forbidden.push('MQTT_PASSWORD deve essere impostata (almeno 12 caratteri) in produzione.');
+  }
   if (value.CORS_ALLOWED_ORIGINS && /\*|localhost|127\.0\.0\.1/i.test(value.CORS_ALLOWED_ORIGINS)) {
     forbidden.push('CORS_ALLOWED_ORIGINS non può contenere "*" o host locali in produzione.');
   }

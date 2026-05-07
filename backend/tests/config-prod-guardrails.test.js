@@ -120,8 +120,42 @@ describe('config production guardrails', () => {
       ...BASE_DEV,
       APP_ENV: 'production',
       MQTT_BROKER_URL: 'mqtts://broker.example.com',
+      MQTT_PASSWORD: 's'.repeat(20),
       CORS_ALLOWED_ORIGINS: '*'
     }, loadConfig)).toThrow(/Segreti di default/);
+  });
+
+  // R-CONFIG-MQTT-001 — chiusura F-MED-005.
+  it('APP_ENV=production rifiuta MQTT_PASSWORD vuota', () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => withEnv({
+        ...BASE_DEV,
+        APP_ENV: 'production',
+        MQTT_BROKER_URL: 'mqtts://broker.example.com:8883',
+        MQTT_PASSWORD: '',
+        CORS_ALLOWED_ORIGINS: 'https://x.example.com'
+      }, loadConfig)).toThrow(/Segreti di default/);
+      expect(errSpy.mock.calls.flat().join(' ')).toMatch(/MQTT_PASSWORD/);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it('APP_ENV=production rifiuta MQTT_PASSWORD troppo corta', () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => withEnv({
+        ...BASE_DEV,
+        APP_ENV: 'production',
+        MQTT_BROKER_URL: 'mqtts://broker.example.com:8883',
+        MQTT_PASSWORD: 'short',
+        CORS_ALLOWED_ORIGINS: 'https://x.example.com'
+      }, loadConfig)).toThrow(/Segreti di default/);
+      expect(errSpy.mock.calls.flat().join(' ')).toMatch(/MQTT_PASSWORD/);
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 
   it('APP_ENV=production accetta configurazione sana', () => {
@@ -132,6 +166,7 @@ describe('config production guardrails', () => {
       INFLUX_TOKEN: 'z'.repeat(40),
       DATABASE_URL: 'postgresql://u:strongSecretHere@db.example.com:5432/prod',
       MQTT_BROKER_URL: 'mqtts://broker.example.com:8883',
+      MQTT_PASSWORD: 's'.repeat(20),
       CORS_ALLOWED_ORIGINS: 'https://app.factorymind.it,https://admin.factorymind.it'
     }, () => {
       const cfg = loadConfig();
