@@ -496,11 +496,11 @@ Each ticket below uses the canonical schema:
   - `chown -R nginx:nginx /usr/share/nginx/html` in the same Dockerfile.
   - `docker run --rm fm-frontend whoami` returns `nginx`.
   - Container still serves the SPA on port 5173.
-- **Regression test:** existing health check + manual browser test.
+- **Regression test:** `backend/tests/frontend-dockerfile.test.js` asserts the production stage carries `USER` and the value is non-root; existing health check + manual browser test verify runtime.
 - **Blast radius:** Frontend container.
 - **Rollback plan:** revert.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — `frontend/Dockerfile` production stage rewrites the embedded nginx config to write PID + temp files to `/tmp` (the only directory the unprivileged `nginx` user can write), `chown`s `/usr/share/nginx/html` and `/var/cache/nginx` to `nginx:nginx`, then `USER nginx`. Listener already on port 5173 (no privileged-port concern).
 
 ### R-K8S-DIGEST-001 — Use image digest pinning in k8s/deployment.yaml.
 
@@ -1690,7 +1690,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-CONTACT-ESCAPE-001 | W1 | Pending | TBD | TBD | — |
 | R-GDPR-001 | W1 | Pending | TBD | TBD | — |
-| R-FRONTEND-DOCKERFILE-USER-001 | W1 | Pending | TBD | TBD | — |
+| R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/frontend-dockerfile.test.js — USER non-root assertion |
 | R-K8S-DIGEST-001 | W1 | Pending | TBD | TBD | — |
 | R-SUPPLY-001 | W1+W2 | Pending | TBD | TBD | — |
 | R-WS-AUTH-001 | W1 | Pending | TBD | TBD | — |
