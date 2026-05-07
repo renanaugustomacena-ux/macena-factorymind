@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from '@/pages/Dashboard';
@@ -21,7 +22,7 @@ const NAV = [
   { to: '/reports', label: 'Report' }
 ];
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full bg-steel-50">
       <nav className="border-b border-steel-200 bg-white">

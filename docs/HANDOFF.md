@@ -142,12 +142,31 @@ These are the boundaries. Doctrine rule **H-3** ("Italian for legal, English for
 
 To set realistic expectations for the cold reader: at the time of this document's publication, FactoryMind is **post-pilot, pre-first-commercial-Tier-2**. The codebase is mature (production-ready stack, comprehensive auth, audit log, RBAC, helmet, CSP, rate-limit, tested in CI). The legal templates exist (`legal/`) but carry `[DA_COMPILARE]` placeholders that the first customer engagement will fill. The landing page (`landing-page/index.html`) is functional Italian content but lacks a cookie banner and analytics gating. The CD pipeline (`.github/workflows/cd.yml`) has placeholder deploy steps that will be implemented during the first paying engagement.
 
-This document presents the system as it is, not as it will be. Anything that is "target state" rather than "current state" is labelled in bold (cfr. doctrine rule **M-5**). Specifically:
+This document presents the system as it is, not as it will be. Anything that is "target state" rather than "current state" is labelled in bold (cfr. doctrine rule **M-5**). Specifically (as of v1.0.1, 2026-05-07 — the post-W1-sweep update):
 
-- The 8 runbooks in § 8 *exist in this document*, not in `docs/runbooks/` (the directory is empty in the current commit). § 8 IS the runbook directory; if you prefer separate files, [`REMEDIATION.md`](REMEDIATION.md) ticket R-RUNBOOK-SPLIT-001 covers the migration.
-- The GDPR export and erasure scripts (`scripts/export-subject.sh`, `scripts/erase-subject.sh`) are referenced in the legacy `DATA_GOVERNANCE.md` but **do not exist in the repo**. § 7.3 documents the current manual procedure; [`REMEDIATION.md`](REMEDIATION.md) R-GDPR-001 ships the automation.
-- The Cosign image-signing pipeline is cited in `k8s/deployment.yaml:63` comment but **is not implemented** in `cd.yml`. § 5.3 documents this honestly; [`REMEDIATION.md`](REMEDIATION.md) R-SUPPLY-001 closes it.
-- The Terraform remote-state backend is **commented out** in `terraform/versions.tf:14–20`. § 5.4 documents the current local-state default; [`REMEDIATION.md`](REMEDIATION.md) R-TF-STATE-001 fixes it before any production apply.
+- The 8 runbooks in § 8 *exist in this document*, not in `docs/runbooks/` (the directory is empty in the current commit). § 8 IS the runbook directory; if you prefer separate files, [`REMEDIATION.md`](REMEDIATION.md) ticket R-RUNBOOK-SPLIT-001 covers the migration. **Update 2026-05-07:** `monitoring/alerts.yml` `runbook_url` annotations now point at `<HANDOFF_URL>#h-runbook-<lowercased-alertname>` anchors materialised in § 8.3-8.10 (R-RUNBOOK-001 closed).
+- The GDPR export and erasure scripts (`scripts/export-subject.sh`, `scripts/erase-subject.sh`) are referenced in the legacy `DATA_GOVERNANCE.md`. **Update 2026-05-07:** R-GDPR-001 closed — both scripts now exist alongside `backend/src/services/gdpr.js`; the route handlers `/api/users/me/export` and `DELETE /api/users/me` share the same service module so operator and self-service paths converge on one implementation. § 7.3 procedure remains as the offline-DB fallback.
+- The Cosign image-signing pipeline was cited in `k8s/deployment.yaml:63` comment but was not implemented in `cd.yml`. **Update 2026-05-07:** R-SUPPLY-001 (W1 portion) closed — `cd.yml` installs `sigstore/cosign-installer@v3` and signs every image keyless-OIDC against Sigstore Rekor; build-push emits `provenance: true` + `sbom: true`; `R-K8S-DIGEST-001` closed (digest substitution before kubectl apply). Kyverno admission verification (R-K8S-KYVERNO-001) remains W2.
+- The Terraform remote-state backend was commented out in `terraform/versions.tf:14–20`. **Update 2026-05-07:** R-TF-STATE-001 (Code complete) — backend block uncommented, `terraform/bootstrap-state.sh` ships the once-per-account hardening (versioning + KMS + public-access-block + TLS-only policy + cross-account-deny + lifecycle; DDB SSE + PITR + deletion-protection). The actual `terraform init -migrate-state` against the customer AWS account is the operator's gate.
+
+**v1.0.1 W1 sweep — 2026-05-07.** The following W1 tickets closed in a single multi-cluster sweep:
+
+- F-CRIT-001 (R-MQTT-ANON-001): Mosquitto auth required; install.sh provisions passwd via Node PBKDF2-SHA512.
+- F-CRIT-002 (R-MQTT-TLS-001): broker TLS listener on 8883 with install.sh-generated dev CA (production swap-point named).
+- F-CRIT-003 (R-OPCUA-VALIDATE-001): OPC UA endpoint allow-list validator; metadata-service IP literals + RFC1918 IP-literals + cloud-metadata hostnames blocked.
+- F-CRIT-004 (R-TF-STATE-001): Terraform remote state code complete, awaits `terraform apply`.
+- F-CRIT-005 (R-GRAFANA-PG-TLS-001): Postgres `ssl=on` with dev CA + Grafana `sslmode: require`; live verified via `pg_stat_ssl`.
+- F-CRIT-006 (R-TIA-001): Schrems II Transfer Impact Assessment v0.9 drafted at `legal/TIA-INFLUXDATA.md`, awaits counsel sign-off.
+- F-CRIT-007 (R-CI-AUDIT-001): npm audit + Trivy unmasked; live verified RC=1 on lodash@4.17.10 fixture.
+- F-HIGH-001/002/010 (R-FRONTEND-COOKIE-AUTH-001 + R-FRONTEND-AUTH-001 + R-WS-AUTH-001): dual-mode backend (Bearer OR HttpOnly cookie); CSRF double-submit; frontend Login + RequireAuth; WebSocket handshake JWT validation.
+- F-HIGH-003/004 (R-RDS-KMS-001 + R-RDS-EGRESS-001): customer-managed KMS CMK + scoped DB SG egress (Code complete; awaits AWS apply).
+- F-HIGH-005 (R-CONTACT-ESCAPE-001): regression-lock on text-only sendMail.
+- F-HIGH-006 (R-GDPR-001): GDPR scripts + service.
+- F-HIGH-007 (R-FRONTEND-DOCKERFILE-USER-001): nginx non-root.
+- F-HIGH-008 (R-K8S-DIGEST-001): digest pinning in CD.
+- F-HIGH-009 (R-SUPPLY-001 W1 portion): Cosign keyless OIDC.
+- F-MED-005 (R-CONFIG-MQTT-001): MQTT_PASSWORD prod-guard.
+- Plus: R-ADR-001 (`docs/adr/` directory + ADR-0001), R-CI-DOCS-001 (CI docs lint workflow), R-RUNBOOK-001 (alert annotations).
 
 Honest gaps decay; vanity claims do not (doctrine rule **M-2**, [`AUDIT.md`](AUDIT.md) doctrine **A-1**). This handoff names every gap.
 
