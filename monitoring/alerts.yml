@@ -2,8 +2,17 @@
 # FactoryMind — Prometheus alert rules.
 #
 # Bundled with Alertmanager routing (monitoring/alertmanager.yml). These rules
-# defend the SLOs defined in docs/SLO.md. Every alert carries the SLO it
-# backs + a runbook URL.
+# defend the SLOs defined in HANDOFF § 8.
+#
+# R-RUNBOOK-001: every alert carries a `runbook_url` annotation pointing
+# at HANDOFF.md anchor `#h-runbook-<lowercased-alertname>`. Doctrine H-6
+# (HANDOFF.md) makes the absence of this annotation, or a broken
+# anchor, a P0 documentation defect — CI lint R-CI-DOCS-001 enforces it.
+# Alerts without a dedicated runbook section (FactoryMindLatencyP99,
+# FactoryMindEventLoopLag, FactoryMindCPUSaturation,
+# FactoryMindAlertEngineErrors, FactoryMindPostgresDown) point at the
+# parent Alert→Runbook map at § 8.2 (`#82-alert--runbook-map`); a
+# follow-up ticket (R-RUNBOOK-002) materialises the missing five.
 # ============================================================================
 groups:
   - name: factorymind.availability
@@ -18,7 +27,7 @@ groups:
         annotations:
           summary: "FactoryMind API unreachable"
           description: "Backend has not responded to Prometheus scrape for 2 minutes."
-          runbook: "https://runbooks.factorymind.example/FactoryMindAPIDown.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindapidown"
 
       - alert: FactoryMindReadinessFlap
         expr: changes(probe_success{job="factorymind-ready"}[15m]) > 6
@@ -30,7 +39,7 @@ groups:
         annotations:
           summary: "Readiness probe flapping"
           description: "/api/ready transitioned ready<->not-ready more than 3 times in 15 minutes."
-          runbook: "https://runbooks.factorymind.example/FactoryMindReadinessFlap.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindreadinessflap"
 
   - name: factorymind.errors
     rules:
@@ -49,7 +58,7 @@ groups:
         annotations:
           summary: "5xx error rate exceeds 1%"
           description: "Backend 5xx ratio {{ $value | humanizePercentage }} over 10m window."
-          runbook: "https://runbooks.factorymind.example/FactoryMindHighErrorRate.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindhigherrorrate"
 
       - alert: FactoryMindAlertEngineErrors
         expr: sum(rate(factorymind_alert_engine_errors_total[5m])) > 0.1
@@ -60,7 +69,7 @@ groups:
         annotations:
           summary: "Alert engine error rate elevated"
           description: "Alert-engine errors ({{ $value }} per second) — rule evaluation may be failing."
-          runbook: "https://runbooks.factorymind.example/FactoryMindAlertEngineErrors.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#82-alert--runbook-map"
 
   - name: factorymind.latency
     rules:
@@ -77,7 +86,7 @@ groups:
         annotations:
           summary: "HTTP P95 latency > 500 ms"
           description: "P95 latency {{ $value }}s sustained for 15 minutes. SLO target 300 ms."
-          runbook: "https://runbooks.factorymind.example/FactoryMindLatencyBurn.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindlatencyburn"
 
       - alert: FactoryMindLatencyP99
         expr: |
@@ -91,6 +100,7 @@ groups:
           slo: SLO-3
         annotations:
           summary: "HTTP P99 latency > 1.5 s"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#82-alert--runbook-map"
 
   - name: factorymind.resources
     rules:
@@ -105,7 +115,7 @@ groups:
           service: factorymind-backend
         annotations:
           summary: "Node heap > 80%"
-          runbook: "https://runbooks.factorymind.example/FactoryMindHeapPressure.md"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindheappressure"
 
       - alert: FactoryMindEventLoopLag
         expr: nodejs_eventloop_lag_p99_seconds{job="factorymind-backend"} > 0.1
@@ -115,6 +125,7 @@ groups:
           service: factorymind-backend
         annotations:
           summary: "Event-loop lag P99 > 100 ms"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#82-alert--runbook-map"
 
       - alert: FactoryMindCPUSaturation
         expr: |
@@ -125,6 +136,7 @@ groups:
           service: factorymind-backend
         annotations:
           summary: "Backend CPU saturation > 80%"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#82-alert--runbook-map"
 
   - name: factorymind.dependencies
     rules:
@@ -136,6 +148,7 @@ groups:
           service: factorymind-backend
         annotations:
           summary: "FactoryMind backend is disconnected from Mosquitto"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindmqttdisconnected"
 
       - alert: FactoryMindInfluxWriteFailures
         expr: |
@@ -149,6 +162,7 @@ groups:
           slo: SLO-7
         annotations:
           summary: "Influx write-failure ratio > 0.1%"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindinfluxwritefailures"
 
       - alert: FactoryMindPostgresDown
         expr: pg_up{datname="factorymind"} == 0
@@ -158,6 +172,7 @@ groups:
           service: factorymind-postgres
         annotations:
           summary: "Postgres DB unreachable from backend"
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#82-alert--runbook-map"
 
   - name: factorymind.security
     rules:
@@ -171,3 +186,4 @@ groups:
         annotations:
           summary: "Elevated login-failure rate"
           description: "More than 10 failed logins/s for 5 minutes — possible credential stuffing."
+          runbook_url: "https://github.com/factorymind/factorymind/blob/main/docs/HANDOFF.md#h-runbook-factorymindloginanomalies"

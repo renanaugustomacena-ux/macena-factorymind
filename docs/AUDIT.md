@@ -110,6 +110,7 @@ L'auditor rilascia il presente documento con la consapevolezza che esso è **fir
 
 The following twenty rules bind every audit pass — this v1.0 baseline and every subsequent quarterly refresh per HANDOFF doctrine **H-22**.
 
+<a id="a-doctrine-evidence"></a>
 ### Rule A-1 — No finding without evidence.
 
 A finding is the assertion that something is wrong. The assertion is gossip until it carries primary-source evidence.
@@ -130,6 +131,7 @@ Every Critical and High finding carries an 8-vector CVSS 3.1 worksheet entry in 
 
 **Cross-refs.** Appendix B.
 
+<a id="a-bola-surface"></a>
 ### Rule A-3 — Severity classes are publishable to the customer.
 
 Critical / High / Medium / Low map to one-line lay-readable explanations. The customer's commercialista reads severity, not CVSS.
@@ -160,6 +162,7 @@ Every F-CRIT and F-HIGH security finding carries at least one MITRE ATT&CK for I
 
 **Cross-refs.** § 4 examples.
 
+<a id="a-doctrine-citation"></a>
 ### Rule A-6 — No invented decree numbers, CVE IDs, or article numbers.
 
 Every cite traces to HANDOFF Appendix A. If the auditor is unsure, the finding is marked `[VERIFY]` and the closest authoritative source is linked.
@@ -240,6 +243,7 @@ Severity ≠ effort. A 9.1 CVSS that requires ring-zero access is less urgent th
 
 **Cross-refs.** § 8.
 
+<a id="a-doctrine-bilingual"></a>
 ### Rule A-14 — Italian regulator language is preserved.
 
 Decree citations stay in Italian; the surrounding paragraph is in the section's register; the prima-facie quote is italicised.
@@ -322,7 +326,8 @@ The audit catalogues four asset classes in descending order of compromise impact
 
 **A2 — Customer production telemetry + audit log.** The InfluxDB + PostgreSQL `audit_log` are the dataset that, in aggregate, expose the customer's production patterns (cycle times, downtime causes, OEE trends). A breach exposes commercial secrets (Class C3 in HANDOFF § 7.1). **Compromise impact: commercial harm; potential GDPR exposure if `metadata` JSONB has been misused for operator names.**
 
-**A3 — User identities and credentials.** PostgreSQL `users` (C4 PII) + `audit_log` actors + `refresh_tokens`. Compromise allows lateral movement into customer systems if password reuse is in play. **Compromise impact: GDPR Art. 33/34 notification within 72 h.**
+<a id="a-pii-boundary"></a>
+**A3 — User identities and credentials.** PostgreSQL `users` (C4 PII) + `audit_log` actors + `refresh_tokens`. Compromise allows lateral movement into customer systems if password reuse is in play. **Compromise impact: GDPR Art. 33/34 notification within 72 h.** PII boundary: personal data lives only in PostgreSQL (users + audit_log.actor + refresh_tokens); machine telemetry in InfluxDB carries no personal data (HANDOFF § 7.2 enumerates).
 
 **A4 — Cryptographic material.** JWT secrets, MQTT credentials, InfluxDB tokens, Postgres credentials, OPC UA private keys. Loss of any subset enables A2/A3 compromise without further escalation. **Compromise impact: full platform takeover.**
 
@@ -889,6 +894,7 @@ Hard-coded; the dashboard's `index.html` is the same.
 
 **Remediation:** [`REMEDIATION.md`](REMEDIATION.md#r-ticket-r-nis2-scope-001) (R-NIS2-SCOPE-001) — legal counsel review; document the conclusion + supporting reasoning.
 
+<a id="a-cra-applicability"></a>
 ### F-MED-LEGAL-004 — CRA applicability analysis open.
 
 **Severity:** Medium. **Category:** Cyber Resilience Act (Reg. UE 2024/2847).
@@ -1222,6 +1228,7 @@ The "Alto" level requires independent penetration testing and a formal incident-
 
 ---
 
+<a id="a-strength-migrations"></a>
 ## 11. Strengths (do-not-regress list)
 
 These properties of the platform are working well; the remediation phase MUST NOT inadvertently break them. Each strength carries a short rationale and the regression-test that defends it.
@@ -1242,6 +1249,7 @@ These properties of the platform are working well; the remediation phase MUST NO
 
 **Regression test.** CMD-023 (Appendix A) — a tenant-A user attempts to subscribe to tenant-B topics and is denied.
 
+<a id="a-strength-config-guardrail"></a>
 ### 11.3 Backend production guardrails
 
 **Property.** `backend/src/config/index.js:113-145` runs after Joi schema validation and refuses boot on: `JWT_SECRET` placeholder; `JWT_SECRET` < 32 chars; `MQTT_BROKER_URL` not `mqtts://`; CORS contains `*` or `localhost`; `INFLUX_TOKEN` < 32 chars.

@@ -1344,6 +1344,7 @@ Error-budget policy: Green (< 25 % spent) → ship freely; Yellow (25–75 %) �
 
 Each runbook below follows the canonical structure: **Symptom → Diagnosis → Mitigation → Escalation → Postmortem template**.
 
+<a id="h-runbook-factorymindapidown"></a>
 ### 8.3 Runbook — `FactoryMindAPIDown`
 
 **Symptom.** `up{job="factorymind-backend"} == 0` for 2 minutes. The backend's `/metrics` endpoint is unreachable from Prometheus. Pages on-call.
@@ -1364,6 +1365,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Postmortem.** Within 5 working days. Template at § 8.PM.
 
+<a id="h-runbook-factorymindhigherrorrate"></a>
 ### 8.4 Runbook — `FactoryMindHighErrorRate`
 
 **Symptom.** 5xx rate > 1 % over 10 minutes. SLO-1 budget burning.
@@ -1383,6 +1385,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Postmortem.** Required if budget burn > 5 %.
 
+<a id="h-runbook-factorymindlatencyburn"></a>
 ### 8.5 Runbook — `FactoryMindLatencyBurn`
 
 **Symptom.** P95 latency > 500 ms over 15 minutes. SLO-2 budget burning.
@@ -1400,6 +1403,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Escalation.** Ticket; pager only if SLO budget Red.
 
+<a id="h-runbook-factorymindmqttdisconnected"></a>
 ### 8.6 Runbook — `FactoryMindMQTTDisconnected`
 
 **Symptom.** Backend `factorymind_mqtt_connected == 0` for 1 minute. Pages immediately because telemetry ingestion is paused.
@@ -1417,6 +1421,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Escalation.** If telemetry remains paused > 10 min: customer notice. Edge buffer covers ≈ 90 s; beyond that data loss is likely (telemetry is QoS 0, alarms are QoS 1 — the latter recover, the former are gone).
 
+<a id="h-runbook-factorymindinfluxwritefailures"></a>
 ### 8.7 Runbook — `FactoryMindInfluxWriteFailures`
 
 **Symptom.** Write-failure ratio > 0.1 % over 10 minutes. SLO-7 budget burning.
@@ -1430,6 +1435,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 - Influx server: check disk, restart if needed.
 - Cardinality blow-up: identify the misbehaving topic (typically a misconfigured device dumping high-entropy tag values); pause its ingestion via ACL.
 
+<a id="h-runbook-factorymindheappressure"></a>
 ### 8.8 Runbook — `FactoryMindHeapPressure`
 
 **Symptom.** Heap usage > 80 % of `--max-old-space-size` for 10 min.
@@ -1438,6 +1444,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Mitigation.** Pod restart relieves. Persistent root cause requires code fix.
 
+<a id="h-runbook-factorymindreadinessflap"></a>
 ### 8.9 Runbook — `FactoryMindReadinessFlap`
 
 **Symptom.** `/api/ready` flaps between 200 and 5xx > 6 times in 15 min.
@@ -1446,6 +1453,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 **Mitigation.** Address the flapping dependency; readiness-probe timeout tuning if appropriate.
 
+<a id="h-runbook-factorymindloginanomalies"></a>
 ### 8.10 Runbook — `FactoryMindLoginAnomalies`
 
 **Symptom.** > 10 failed logins per second.
@@ -1652,6 +1660,7 @@ Single source of truth for all citations. Every cross-document reference resolve
 - **D.Lgs. 7 marzo 2005, n. 82** ("CAD" — Codice dell'Amministrazione Digitale), per riferimenti accessibilità.
 - **L. 9 gennaio 2004, n. 4** ("Stanca law") + **D.Lgs. 10 agosto 2018, n. 106** — Accessibilità WCAG.
 - **D.Lgs. 9 aprile 2008, n. 81** — Testo Unico Sicurezza sul Lavoro.
+- **D.Lgs. 152/2006** — Testo Unico Ambientale (parte IV — gestione rifiuti, RENTRI, FIR; rilevante per integrazione cross-product `macena-logi-track` con il modulo scrap del MES). https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2006-04-03;152
 - **DPR 29 settembre 1973, n. 600** — Accertamento fiscale.
 - **D.Lgs. 5 agosto 2015, n. 127** — FatturaPA + SDI.
 - **D.Lgs. 9 ottobre 2002, n. 231** — Interessi di mora.
@@ -1694,6 +1703,7 @@ Single source of truth for all citations. Every cross-document reference resolve
 
 - **CVE-2024-10525** — Mosquitto SUBACK out-of-bounds. https://github.com/advisories/GHSA-cm54-mprw-5279
 - **CVE-2023-28366** — Mosquitto memory leak.
+- **CVE-2024-3935** — Mosquitto TLS hostname validation gap (referenced AUDIT § 9 CVE register; verify in production deployment using TLS listener). https://nvd.nist.gov/vuln/detail/CVE-2024-3935
 - **CVE-2024-30896** — InfluxDB operator-token disclosure (CVSS 9.1, fixed 2.7.11+). https://www.wiz.io/vulnerability-database/cve/cve-2024-30896
 - **CVE-2025-4123** — Grafana path-traversal → SSRF.
 - **CVE-2024-42512 / CVE-2024-42513 / CVE-2025-1468** — OPC UA stack vulnerabilities. https://files.opcfoundation.org/SecurityBulletins/

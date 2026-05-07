@@ -575,6 +575,7 @@ Each ticket below uses the canonical schema:
 - **Effort:** S.
 - **Status:** Verified (2026-05-07) — `backend/src/config/index.js` adds the empty / short MQTT_PASSWORD guard; `backend/tests/config-prod-guardrails.test.js` tests `rifiuta MQTT_PASSWORD vuota` + `rifiuta MQTT_PASSWORD troppo corta` cover the failure paths. Length floor of 12 chars chosen to match `PASSWORD_MIN_LENGTH` default.
 
+<a id="r-ticket-r-runbook-001"></a>
 ### R-RUNBOOK-001 — Materialise the eight runbooks referenced from monitoring/alerts.yml.
 
 - **Findings closed:** Doctrine **H-6** gap (alerts referenced runbooks that didn't exist in `docs/runbooks/`).
@@ -588,6 +589,7 @@ Each ticket below uses the canonical schema:
 - **Effort:** Already done (in HANDOFF.md); this ticket tracks the verification.
 - **Status:** Verified upon HANDOFF v1.0 publication.
 
+<a id="r-ticket-r-ci-docs-001"></a>
 ### R-CI-DOCS-001 — Add documentation lint job to CI.
 
 - **Findings closed:** Doctrine **H-9** gap (docs-as-code not enforced).
@@ -966,7 +968,7 @@ Each ticket below uses the canonical schema:
   - ADR template at `docs/adr/_template.md`.
   - HANDOFF references the directory consistently.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `docs/adr/` directory created with: `template.md` (canonical ADR shape — Michael Nygard format adapted for the four-doc set, with multi-role sign-off block), `0001-four-document-doctrine-set.md` (records the v1.0 doctrine baseline + supersession matrix + reversibility note), `README.md` (5 doctrine rules for ADR governance: one decision per ADR, monotonic immutable numbering, status discipline, multi-role sign-off, no retroactive blessing of violations). The legacy "0001-doctrine-baseline.md" filename in the old exit criteria was renamed during authoring to a more specific title; the substance matches.
 
 ### R-OWNER-001 — Assign second owners to every § 4 module post hire #2.
 
@@ -1697,7 +1699,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-DPA-FILL-001 | W1 | Pending | TBD | TBD | — |
 | R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
 | R-RUNBOOK-001 | W1 | Verified | Renan | Renan (self-review) | 2026-05-07 |
-| R-CI-DOCS-001 | W1 | Pending | TBD | TBD | — |
+| R-CI-DOCS-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/docs-lint.yml` + `scripts/lint-docs.js` + `.markdownlint.json` ship a 4-pass docs lint (anchors / decree-citations / word-count / freshness). Local run on the canonical four-doc set: 0 errors, 4 allowlisted warnings (R-AUDIT-MED-IDS-001 follow-up). |
 | (W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
 
 Updated quarterly (HANDOFF doctrine **H-22**).

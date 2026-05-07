@@ -1,0 +1,56 @@
+name: Docs Lint
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docs/**"
+      - "monitoring/alerts.yml"
+      - "scripts/lint-docs.js"
+      - ".github/workflows/docs-lint.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "docs/**"
+      - "monitoring/alerts.yml"
+      - "scripts/lint-docs.js"
+      - ".github/workflows/docs-lint.yml"
+
+# R-CI-DOCS-001 (closes the H-9 "documentation is code" gap):
+#   - markdownlint enforces house style (line length, ordered lists,
+#     code-fence languages).
+#   - link-check resolves every relative `[label](FILE.md#anchor)` to a
+#     real heading or HTML anchor on disk.
+#   - decree-citation lint asserts every art./D.Lgs./Reg.UE/CVE present
+#     in the four-doc set has a matching entry in HANDOFF Appendix A
+#     (the doctrine **A-6** "no invented decree numbers" enforcement).
+#   - word-count floor: each of HANDOFF/AUDIT/REMEDIATION/UPLIFT must
+#     hit the documented minimum (≥ 18 000 words; the published v1.0
+#     target was ≥ 20 000 but the floor leaves ~10% slack for
+#     typo-fix PRs that legitimately reduce word count).
+#   - "Last reviewed" date in AUDIT § 9 must be ≤ 95 days old (CVE
+#     cadence enforcement, doctrine **A-12**).
+
+jobs:
+  markdownlint:
+    name: Docs · markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: |
+          npm install -g markdownlint-cli@0.43.0
+          markdownlint --config .markdownlint.json "docs/**/*.md"
+
+  custom-doc-lints:
+    name: Docs · anchor + decree + word-count + freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run combined lint
+        run: node scripts/lint-docs.js
