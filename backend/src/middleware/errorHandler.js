@@ -18,9 +18,17 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 
 const PROBLEM_BASE = 'https://factorymind.example/problems';
+// R-ERROR-SAFE-001 — F-MED-CODE-005 closure. For status >= 500 the central
+// handler MUST NOT echo `err.message` to the client; driver-level text
+// (DB DSNs, file paths, MQTT topics) leaks through that field. The full
+// error remains in the server-side log under the same `event_id` returned
+// in the response so the operator can correlate.
+const GENERIC_INTERNAL_DETAIL =
+  'Errore interno — i dettagli tecnici sono nei log del server.';
 
 const TITLE_BY_STATUS = Object.freeze({
   400: 'Bad Request',
@@ -74,9 +82,19 @@ function buildProblem({ status, title, detail, instance, extra }) {
  
 function errorHandler(err, req, res, _next) {
   const status = err.status || err.statusCode || 500;
-  if (status >= 500) {
+  const isInternal = status >= 500;
+  const eventId = isInternal ? crypto.randomBytes(8).toString('hex') : undefined;
+  const code = typeof err.code === 'string' ? err.code : (isInternal ? 'INTERNAL' : undefined);
+  if (isInternal) {
     logger.error(
-      { err: err.message, stack: err.stack, route: req.originalUrl, method: req.method },
+      {
+        err: err.message,
+        stack: err.stack,
+        code,
+        event_id: eventId,
+        route: req.originalUrl,
+        method: req.method
+      },
       '[http] unhandled error'
     );
   } else {
@@ -85,11 +103,16 @@ function errorHandler(err, req, res, _next) {
       '[http] client error'
     );
   }
+  const detail = isInternal ? GENERIC_INTERNAL_DETAIL : (err.message || 'error');
+  const extra = {};
+  if (eventId) extra.event_id = eventId;
+  if (code) extra.code = code;
   const body = buildProblem({
     status,
     title: err.title,
-    detail: err.message || 'internal server error',
-    instance: req.originalUrl
+    detail,
+    instance: req.originalUrl,
+    extra: Object.keys(extra).length > 0 ? extra : undefined
   });
   res.status(body.status);
   res.set('Content-Type', 'application/problem+json; charset=utf-8');

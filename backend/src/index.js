@@ -232,7 +232,11 @@ async function main() {
       sparkplug.start();
       logger.info('[boot] Sparkplug B bridge enabled');
     } catch (err) {
-      logger.warn({ err: err.message }, '[boot] Sparkplug bridge failed to start');
+      // R-SPARKPLUG-LOAD-001: ERROR (not WARN) — operator opted in via
+      // SPARKPLUG_ENABLED=true and the bridge failed; this is a configuration
+      // or dependency problem worth paging on. Backend continues to boot
+      // without the bridge enabled (graceful degradation by design).
+      logger.error({ err: err.message }, '[boot] Sparkplug bridge failed to start');
     }
   } else {
     logger.info('[boot] Sparkplug B bridge disabled (SPARKPLUG_ENABLED=false)');

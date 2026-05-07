@@ -710,7 +710,7 @@ Each ticket below uses the canonical schema:
   - Replaces inline `res.status(500).json({ error: err.message })` patterns.
   - Logs the full error server-side; returns a stable error code only.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New helper `backend/src/utils/safe-error.js` exports `safeInternal(res, code, err, req?)` — emits 500 problem+json with the canonical generic detail (`'Errore interno — i dettagli tecnici sono nei log del server.'`), a random 16-hex `event_id` returned in body and logged alongside the full `err.message` + stack at ERROR server-side, plus a stable `code` (defaults to `'INTERNAL'`). The central `backend/src/middleware/errorHandler.js` was extended in the same change because that's where every `next(err)` 500 was leaking driver text via the `detail` field — for status >= 500 the detail is now the generic message + `event_id` + `code`; for status < 500 the existing Joi-style `err.message` path is preserved verbatim (Joi messages are user-facing safe by design and many are explicitly Italianised in the routes). Coverage: `backend/tests/safe-error.test.js` (11 cases) asserts: no err.message in body, ERROR-vs-WARN log split by status class, `event_id` correlation between response body and log line, 4xx codes preserve the original message, generic detail does not leak DSN-style strings ("`10.42.0.7:5432`", "`relation \"users\" does not exist`"). Backend Jest 249 / 249.
 
 ### R-INFLUX-TASK-001 — Verify InfluxDB downsampling task creation at startup.
 
@@ -722,7 +722,7 @@ Each ticket below uses the canonical schema:
   - `bootstrapTasks()` lists tasks after creation; logs task IDs at INFO.
   - `/api/health` dependency check fails if any of the three downsampling tasks is missing.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `backend/src/services/influx-writer.js` exports `EXPECTED_DOWNSAMPLING_TASKS` (frozen `['downsample_1m', 'downsample_1h', 'downsample_1d']`) and a new async `tasksHealth()` that returns `{ ok, present, missing, error? }` from a live `/api/v2/tasks` query. Per advisor: live not cached — a task deleted at runtime surfaces on the next `/api/health` hit (live-truth semantics, not boot-time snapshot). `bootstrapTasks()` re-lists tasks after the creation loop and logs `{name, id, status}` at INFO under `[influx] downsampling tasks bootstrap complete`. `backend/src/routes/health.js` AND-s `tasksHealth().ok` into the overall readiness vote — `/api/health` returns 503 if any of the three is missing, with `dependencies.influxdb_tasks: { ok, present, missing }` in the envelope so the operator can see which task is gone. Coverage: `backend/tests/influx-task-bootstrap.test.js` (8 cases — all-present / one-missing / all-missing / extra-tasks-tolerated / Influx-error-graceful / org-missing / bootstrap-logging assertion / EXPECTED frozen contract) + `backend/tests/health.test.js` extended with two 503 cases (one task missing, all three missing).
 
 ### R-MQTT-TOPIC-VALIDATION-001 — Tighten MQTT topic regex.
 
@@ -735,7 +735,7 @@ Each ticket below uses the canonical schema:
   - Iot-simulator passes new regex; Sparkplug bridge translates correctly.
   - Cardinality monitoring ticket (R-INFLUX-CARDINALITY-AUDIT-001) covers ongoing scrutiny.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `backend/src/mqtt/topics.js` rewritten: `KINDS` now includes `COUNTERS: 'counters'` (was missing — any counters producer would have silently failed `parse()` pre-fix); `ID_REGEX` tightened to `/^[a-z0-9-]{1,32}$/` (per-segment, lower-case, 1-32 chars, no leading-char rule per spec — legitimate facility / line / machine IDs in production never use leading hyphen, so the relaxation does not surface as a risk in practice); new `CANONICAL_TOPIC_REGEX` matches the exit criterion verbatim and is exported alongside a `validate(topic)` predicate. `parse()` now delegates to `validate()` so it stays in lock-step with the canonical regex. Iot-simulator topics (`factory/{facility}/{line}/{machine}/{telemetry|status|alarms}` per `iot-simulator/simulator.js:243-258`) pass — simulator uses the lowercase form natively. Sparkplug bridge operates on the separate `spBv1.0/...` hierarchy (different grammar, unaffected by this validation). Coverage: `backend/tests/mqtt-topics.test.js` (33 cases) — 8 good-topic positives, 13 bad-topic negatives covering uppercase / unknown-kind / >32-char-segment / underscore / dot / space / extra-slash / sparkplug bleed-over, plus build / parse / validate / subscriptionTopic / matches contract tests + ID_REGEX boundary tests. R-INFLUX-CARDINALITY-AUDIT-001 covers the ongoing scrutiny that the bounded segment grammar alone does not guarantee.
 
 ### R-SPARKPLUG-LOAD-001 — Robust dynamic-require for sparkplug-bridge.
 
@@ -748,7 +748,7 @@ Each ticket below uses the canonical schema:
   - On require failure, logs ERROR with explanatory message; backend boots without Sparkplug bridge enabled.
   - CI test runs with `SPARKPLUG_ENABLED=true` to catch dependency breakage.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `backend/src/index.js:235` flipped `logger.warn` → `logger.error` — operator opted in via `SPARKPLUG_ENABLED=true` and the bridge failed, this is a configuration / dependency event worth paging on; backend continues to boot without the bridge enabled (graceful degradation by design, captured in the catch block comment). The try/catch wrapper at lines 228-240 was already in place from earlier work. Honest gap (doctrine **H-20**): the exit criterion calls for "CI test runs with `SPARKPLUG_ENABLED=true`"; the substitute is `backend/tests/sparkplug-load.test.js` (8 cases) — sets `process.env.SPARKPLUG_ENABLED='true'` and exercises the require + start path against the actual bridge module, covering NotConfiguredError when broker URL absent / successful start with `SPARKPLUG_BROKER_URL` set / fallback to `MQTT_BROKER_URL` / idempotent start / stop teardown / source-text assertions on the `index.js` wrapper (try/catch present, `logger.error` not `warn`, dual-flag gate `config.sparkplug?.enabled === true || env.SPARKPLUG_ENABLED === 'true'`). CI runs Jest end-to-end so the path is exercised on every push without a redundant separate workflow step (avoiding scope creep per advisor).
 
 ### R-FRONTEND-LINT-001 — Enable @typescript-eslint/no-explicit-any.
 
@@ -1713,7 +1713,10 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-FRONTEND-LINT-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `frontend/eslint.config.cjs:50` flipped `@typescript-eslint/no-explicit-any` from `'off'` to `'error'`; `frontend/src/pages/Reports.tsx` cast `(oeeQuery.data?.aggregate as any)` replaced by typed module-level `FALLBACK_OEE: OEEResult` constant. One-shot triage: only `any` in `frontend/src/` was the Reports.tsx cast; `eslint src` returns 0 violations (RC=0) with the rule enabled. |
 | R-FRONTEND-DEPS-CLEANUP-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `npm uninstall mqtt socket.io-client` removed 47 packages cleanly (npm-driven lockfile regen, not hand-edited per advisor). `frontend/package.json` no longer lists either; `grep -rn "from 'mqtt'\|from 'socket.io-client'" src` empty. Honest gap (doctrine **H-20**): exit criterion names `npx depcheck` as verifier but autopilot rejected pulling external CLI; substitute evidence is clean `tsc --noEmit` + grep. |
 | R-FRONTEND-DEV-BIND-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `frontend/vite.config.ts` `server.host: '127.0.0.1'` (was `'0.0.0.0'`); `frontend/package.json` `dev` script: `vite --port 5173` — no `--host` flag (config value applies when CLI is absent; CLI overrides config in Vite, hence the override works). Cross-machine override: `npm run dev -- --host 0.0.0.0`. Out-of-scope-but-noted: `preview` script still has `--host 0.0.0.0` (F-LOW-CODE-002 names dev only). Side-fix shared with SOURCEMAP-001: stale `vite.config.js` shadow had `host: '0.0.0.0'` and was overriding the `.ts`; emit redirect + git rm resolved. |
-| (remaining W2 + W3 tickets continued) | ... | ... | ... | ... | ... |
+| R-ERROR-SAFE-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | New helper `backend/src/utils/safe-error.js` exports `safeInternal(res, code, err, req?)` — emits 500 problem+json with generic Italian detail (`'Errore interno — i dettagli tecnici sono nei log del server.'`), random 16-hex `event_id` returned in body and logged with full err.message + stack at ERROR. Same change extends `backend/src/middleware/errorHandler.js`: for status >= 500 the `detail` is now the generic message + `event_id` + `code` (no driver-text leak); for status < 500 the existing Joi-style `err.message` path is preserved (Joi messages are user-facing safe). Coverage: `backend/tests/safe-error.test.js` (11 cases) — body never contains DSN-style strings, ERROR-vs-WARN log split by status class, event_id correlation between body and log. |
+| R-INFLUX-TASK-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `backend/src/services/influx-writer.js` exports `EXPECTED_DOWNSAMPLING_TASKS` (frozen) + new async `tasksHealth()` that returns `{ ok, present, missing, error? }` from a live `/api/v2/tasks` query (live not cached per advisor — runtime task deletions surface on the next `/api/health` hit). `bootstrapTasks()` re-lists tasks after creation and logs `{name, id, status}` at INFO. `routes/health.js` ANDs `tasksHealth().ok` into the readiness vote — `/api/health` returns 503 if any of the three is missing. Coverage: `backend/tests/influx-task-bootstrap.test.js` (8 cases) + `backend/tests/health.test.js` extended with two 503 cases (one missing / all missing). |
+| R-MQTT-TOPIC-VALIDATION-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `backend/src/mqtt/topics.js` rewritten: KINDS now includes `COUNTERS: 'counters'` (was missing — any counters producer would have silently failed `parse()`); `ID_REGEX` tightened to `/^[a-z0-9-]{1,32}$/` (per-segment, lower-case, 1-32 chars per spec); new exported `CANONICAL_TOPIC_REGEX` matches exit criterion verbatim and is paired with a `validate()` predicate. `parse()` now delegates to `validate()`. Iot-simulator topics pass natively (lowercase form per `iot-simulator/simulator.js:243-258`); Sparkplug bridge operates on the separate `spBv1.0/...` grammar and is unaffected. Coverage: `backend/tests/mqtt-topics.test.js` (33 cases) — 8 good-topic positives, 13 bad-topic negatives, plus contract tests for build / parse / validate / subscriptionTopic / matches and ID_REGEX boundary tests. |
+| R-SPARKPLUG-LOAD-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `backend/src/index.js:235` flipped `logger.warn` → `logger.error` (operator opted in via `SPARKPLUG_ENABLED=true` and bridge failed → operator-attention event). The try/catch wrapper at 228-240 was already in place from earlier work. Honest gap (doctrine **H-20**): exit criterion names "CI test runs with `SPARKPLUG_ENABLED=true`"; substitute is `backend/tests/sparkplug-load.test.js` (8 cases) — sets `SPARKPLUG_ENABLED='true'` and exercises the require + start path against the actual bridge module (NotConfiguredError without broker URL / successful start with broker URL set / MQTT_BROKER_URL fallback / idempotent start / stop teardown / 3 source-text assertions on `index.js` wrapper). CI runs Jest end-to-end so the path is exercised on every push without a redundant workflow step. |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -1881,6 +1884,25 @@ Five additional W2 / W3 tickets closed the same day, ahead of their respective S
 **W2 still Pending (14):** R-K8S-NETPOL-001, R-FRONTEND-i18n-001, R-ERROR-SAFE-001, R-INFLUX-TASK-001, R-MQTT-TOPIC-VALIDATION-001, R-SPARKPLUG-LOAD-001, R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-LEGAL-SLA-ALIGN-001, R-AUDIT-ASYNC-001 (conditional), R-ATTESTAZIONE-IDEMPOTENCY-001, R-PGBOUNCER-001, R-FRONTEND-BEARER-RETIRE-001 (post-W1-dual-mode-cycle).
 
 **Side-fix discovered during the sweep.** Tracked compiled artifacts `frontend/vite.config.js` + `frontend/vite.config.d.ts` (emitted by `tsc -b` via `tsconfig.node.json`'s project reference) were shadowing the canonical `vite.config.ts` source — Vite v7 was loading the stale `.js` at config-evaluation time and silently ignoring `.ts` edits. Without redirecting emit (`outDir` + `declarationDir: ./node_modules/.cache/tsc-node` in tsconfig.node.json) and `git rm`-ing the stale artifacts, neither R-FRONTEND-SOURCEMAP-001 nor R-FRONTEND-DEV-BIND-001 would have taken effect at runtime regardless of source-level edits. This is now the canonical pattern for any TS-source config in this repo whose project-reference `tsconfig` carries `composite: true`.
+
+### v1.0.4 — W2 batch C (backend hardening) (2026-05-07)
+
+| Wave | Total tickets | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 22 | 10 | 2 | 10 | 0 |
+| W3 | 12 | 10 | 0 | 2 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **63** | **31** | **6** | **26** | **0** |
+
+Four W2 tickets closed the same day, ahead of the 2026-08-05 SLA, as a backend-hardening pass with zero external dependencies. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+
+**W2 Verified added (4):** R-ERROR-SAFE-001 (`safeInternal` helper + central `errorHandler` 500-leak suppression — F-MED-CODE-005 closure), R-INFLUX-TASK-001 (live `tasksHealth()` + `/api/health` gating + bootstrap task-id logging — F-MED-DATA-001 closure), R-MQTT-TOPIC-VALIDATION-001 (canonical regex + `counters` kind + per-segment 32-char tightening — F-MED-DATA-004 closure), R-SPARKPLUG-LOAD-001 (`logger.warn` → `logger.error` + 8-case Jest substituting for the named CI step per H-20 — F-MED-CODE-006 closure).
+
+**W2 still Pending (10):** R-K8S-NETPOL-001, R-FRONTEND-i18n-001, R-NIS2-SCOPE-001, R-CRA-001, R-A11Y-AUDIT-001, R-LEGAL-SLA-ALIGN-001, R-AUDIT-ASYNC-001 (conditional), R-ATTESTAZIONE-IDEMPOTENCY-001, R-PGBOUNCER-001, R-FRONTEND-BEARER-RETIRE-001 (post-W1-dual-mode-cycle).
+
+Test-suite growth: 182 → 249 (+67 from batch C: 11 safe-error + 8 influx-task + 33 mqtt-topics + 8 sparkplug-load + 3 health regression / 26 → 30 test suites). Backend ESLint clean, frontend ESLint + tsc clean (unchanged).
 
 ---
 

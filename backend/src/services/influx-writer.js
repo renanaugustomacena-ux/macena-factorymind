@@ -154,6 +154,57 @@ async function ping() {
 }
 
 /**
+ * Canonical downsampling task names — must match the `name:` field in each
+ * task's `option task = {...}` line below. R-INFLUX-TASK-001 wires
+ * `tasksHealth()` and `/api/health` to fail-close if any of these is missing
+ * at runtime, so do not rename without coordinating both ends.
+ */
+const EXPECTED_DOWNSAMPLING_TASKS = Object.freeze([
+  'downsample_1m',
+  'downsample_1h',
+  'downsample_1d'
+]);
+
+/**
+ * R-INFLUX-TASK-001 — F-MED-DATA-001 closure. Live health probe for the
+ * three downsampling tasks. Queries InfluxDB on every call (per-call cost
+ * is one /api/v2/tasks GET) so the result is always current truth, not a
+ * boot-time snapshot — a task deleted at runtime surfaces as missing on
+ * the next /api/health hit.
+ *
+ * Returns:
+ *   { ok: boolean, present: string[], missing: string[], error?: string }
+ */
+async function tasksHealth() {
+  try {
+    const orgsApi = new OrgsAPI(client);
+    const tasksApi = new TasksAPI(client);
+    const orgs = await orgsApi.getOrgs({ org: config.influx.org });
+    const orgId = orgs?.orgs?.[0]?.id;
+    if (!orgId) {
+      return {
+        ok: false,
+        present: [],
+        missing: [...EXPECTED_DOWNSAMPLING_TASKS],
+        error: 'org not found'
+      };
+    }
+    const result = await tasksApi.getTasks({ orgID: orgId });
+    const presentSet = new Set((result.tasks || []).map((t) => t.name));
+    const present = EXPECTED_DOWNSAMPLING_TASKS.filter((n) => presentSet.has(n));
+    const missing = EXPECTED_DOWNSAMPLING_TASKS.filter((n) => !presentSet.has(n));
+    return { ok: missing.length === 0, present, missing };
+  } catch (err) {
+    return {
+      ok: false,
+      present: [],
+      missing: [...EXPECTED_DOWNSAMPLING_TASKS],
+      error: err.message
+    };
+  }
+}
+
+/**
  * Provision downsampling tasks at startup (idempotent).
  *
  * Three tasks:
@@ -163,6 +214,10 @@ async function ping() {
  *
  * Each task writes to a separate measurement suffix so the raw stream
  * stays clean and Grafana panels can pick a resolution explicitly.
+ *
+ * R-INFLUX-TASK-001: after the creation loop, lists the present
+ * downsampling tasks and logs their `{name, id}` at INFO so the operator
+ * can correlate against the InfluxDB UI / API.
  */
 async function bootstrapTasks() {
   try {
@@ -221,6 +276,20 @@ from(bucket: "${config.influx.bucket}")
       }
     }
 
+    // R-INFLUX-TASK-001: re-list after creation and log task IDs at INFO.
+    const refreshed = await tasksApi.getTasks({ orgID: orgId });
+    const taskInfo = (refreshed.tasks || [])
+      .filter((t) => EXPECTED_DOWNSAMPLING_TASKS.includes(t.name))
+      .map((t) => ({ name: t.name, id: t.id, status: t.status }));
+    logger.info(
+      {
+        tasks: taskInfo,
+        expected: EXPECTED_DOWNSAMPLING_TASKS,
+        present_count: taskInfo.length
+      },
+      '[influx] downsampling tasks bootstrap complete'
+    );
+
     // Ensure the target bucket exists (noop if pre-provisioned by influxdb env).
     const bucketsApi = new BucketsAPI(client);
     await bucketsApi.getBuckets({ orgID: orgId, name: config.influx.bucket }).catch(() => undefined);
@@ -238,5 +307,7 @@ module.exports = {
   close,
   ping,
   bootstrapTasks,
+  tasksHealth,
+  EXPECTED_DOWNSAMPLING_TASKS,
   queryApi
 };
