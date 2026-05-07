@@ -232,7 +232,15 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me_grafana_admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-piechart-panel"
+      # R-INFRA-GRAFANA-PLUGINS-001: pin to specific versions so a
+      # plugin-side regression can't reach prod silently. Versions
+      # resolved via the Grafana plugins catalog API on 2026-05-07.
+      # Note: grafana-piechart-panel is upstream-deprecated — Grafana
+      # now ships a built-in Pie chart. Remove this plugin in a
+      # follow-up sweep after migrating affected dashboards to the
+      # built-in panel; pinned to 1.6.4 in the meantime to freeze the
+      # exact bytes the dashboards were tested against.
+      GF_INSTALL_PLUGINS: "grafana-clock-panel:3.2.2,grafana-piechart-panel:1.6.4"
       GF_SERVER_ROOT_URL: ${GRAFANA_URL:-http://localhost:3000}
       GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
       INFLUX_TOKEN: ${INFLUX_TOKEN:-please-generate-long-random-token-and-set-here}

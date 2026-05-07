@@ -1171,7 +1171,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Medium.
 - **Exit criteria:** `docker-compose.yml` `GF_INSTALL_PLUGINS` references specific versions (e.g., `grafana-clock-panel@v2.1.4`).
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `docker-compose.yml` `GF_INSTALL_PLUGINS` env var changed from `grafana-clock-panel,grafana-piechart-panel` (mutable, latest at install time) to `grafana-clock-panel:3.2.2,grafana-piechart-panel:1.6.4` — versions resolved via the Grafana plugins catalog API at pin time. Inline comment notes that `grafana-piechart-panel` is upstream-deprecated (Grafana now ships a built-in Pie chart panel) — pinned to 1.6.4 to freeze the exact bytes the existing dashboards were tested against; remove the plugin entirely in a follow-up sweep after migrating affected dashboards to the built-in. docker-compose.yml YAML-valid post-edit.
 
 ### R-CVE-CADENCE — Quarterly CVE register update.
 
@@ -1233,7 +1233,7 @@ Each ticket below uses the canonical schema:
 - **Severity gate:** Medium.
 - **Exit criteria:** CI step `grep -E '^DROP\b|^TRUNCATE\b' backend/src/db/migrations/*.sql` returns non-zero (no matches expected).
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New CI step `Forbid DROP/TRUNCATE in migrations (R-MIGR-LINT-001)` in `.github/workflows/ci.yml` (security job, before the Trivy config scan). Logic: greps the migrations dir for `^DROP\b|^TRUNCATE\b`; if matches found, re-checks each offender for the explicit `-- ALLOW-DROP: <reason>` marker (the doctrine H-14 carve-out documented in HANDOFF Appendix A — rollback of a v1.x feature via a new explicit-DROP migration). Without the marker → fail-closed with a GitHub-Actions-formatted error annotation citing the file. Migrations under `backend/src/db/migrations/*.sql` (001-008) currently contain zero DROP / TRUNCATE statements; the lint has nothing to catch on existing code, but locks the doctrine forward.
 
 ### R-CI-BOOT-001 — CI job timing the clean-machine bootstrap.
 
@@ -1257,7 +1257,7 @@ Each ticket below uses the canonical schema:
 - **Findings closed:** Doctrine **H-12**.
 - **Wave:** W2.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `docs/runbooks/deployment-log-template.md` — operational artefact for the H-12 ceremony. Sections: metadata block (customer / tier / cutover lead / two witnesses — including R-14 enforcement that witness #1 cannot equal cutover lead), pre-flight checklist (5 items including DR runbook freshness re-read), the 12 numbered H-12 checkpoints (each with verify-step + initialled-by line + sequencing rule), customer acceptance form (responsabile IT signature + H-16 perizia acknowledgement), post-cutover items (DR pre-conditions revalidation, customer added to alerting channel, cutover postmortem if any checkpoint exceeded 2× window). Doctrine references on the template: H-12, H-16, R-14, A-12, H-22.
 
 ### R-RUNBOOK-BREACH-001 — Breach-response runbook.
 
@@ -1729,6 +1729,9 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-OTEL-SAMPLING-DOC-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `HANDOFF.md` § 8.12 — Observability — OTel sampling per tier. 4-row table mapping deployment tier (1 / 2 / 3 / 4) to estimated req/s and recommended `OTEL_TRACES_SAMPLER_ARG` (Tier 1: 1.0; Tier 2: 0.5; Tier 3: 0.2; Tier 4: 0.05). Sampler is `parentbased_traceidratio`; error-class spans always sampled. Per-environment override patterns documented (compose + k8s configmap). |
 | R-CUSTOMER-AUDIT-DIR-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `docs/customer-audits/_template.md` — customer security-questionnaire response template (CAIQ Lite / ENISA SaaS / custom). Sections: metadata + scope + response matrix (with Status + Evidence columns linking to HANDOFF / REMEDIATION / AUDIT / legal/), compensating controls, out-of-scope (H-16 perizia stays with perito), follow-ups, multi-party sign-off. Doctrine references: A-12 (annual cadence), H-16, H-22. |
 | R-RUNBOOK-PM-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `docs/postmortems/_template.md` — operational copyable template, parity with the inline HANDOFF § 8.PM template. Sections: severity & duration / customer impact / timeline / blameless root cause (H-17) / went well / went poorly / action items (each ticket-linked) / lessons learned / sign-off (with R-14 non-implementer review). Header comment names the file-path convention and 5-business-day deadline post-resolution. |
+| R-MIGR-LINT-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New CI step `Forbid DROP/TRUNCATE in migrations` in `.github/workflows/ci.yml` (security job). Greps `backend/src/db/migrations/*.sql` for `^DROP\b\|^TRUNCATE\b`; offenders without an explicit `-- ALLOW-DROP: <reason>` marker fail the build with a GitHub-Actions error annotation. The marker is the H-14 forward-only-migrations carve-out (rollback of v1.x features documented in HANDOFF Appendix A). Migrations 001-008 currently contain zero DROP / TRUNCATE — lint locks the doctrine forward. |
+| R-INFRA-GRAFANA-PLUGINS-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | `docker-compose.yml` `GF_INSTALL_PLUGINS` changed from mutable form (`grafana-clock-panel,grafana-piechart-panel`) to pinned (`grafana-clock-panel:3.2.2,grafana-piechart-panel:1.6.4`). Versions resolved via the Grafana plugins catalog API. Inline comment notes piechart is upstream-deprecated (Grafana now ships a built-in Pie chart) — pinned to 1.6.4 in the meantime to freeze the bytes the dashboards were tested against; remove in a follow-up after dashboards migrate to the built-in. |
+| R-RUNBOOK-DEPLOY-001 | W3 | Verified | 2026-05-07 | 2026-05-07 | New `docs/runbooks/deployment-log-template.md` — H-12 ceremony artefact. Twelve numbered checkpoints (secrets in vault / migration applied / broker TLS verified / MQTT creds / ACL deployed / Influx bucket+tasks / first telemetry / first attestazione PDF rendered / audit log working / backup runs / restore drill / customer responsabile IT acceptance form). Each checkpoint has verify-step + initialled-by line + sequencing rule. Witness #1 cannot equal cutover lead (R-14 enforcement). Customer acceptance form acknowledges H-16 (perizia stays with perito). |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -2034,6 +2037,23 @@ Three more W3 tickets closed — observability documentation + scaffolding direc
 **W3 Verified added in batch G (3):** R-OTEL-SAMPLING-DOC-001 (HANDOFF § 8.12 with per-tier sampler-arg table — F-LOW-OBSERVABILITY-001 closure), R-CUSTOMER-AUDIT-DIR-001 (`docs/customer-audits/_template.md` — Audit Appendix N2 dependency closure), R-RUNBOOK-PM-001 (`docs/postmortems/_template.md` — H-17 doctrine closure, parity with HANDOFF § 8.PM).
 
 Backend Jest 340 / 340 (unchanged — batch G is doc-only). Backend ESLint, frontend ESLint + tsc clean. markdownlint 0, custom lint-docs.js 0 (4 allowlisted warnings unchanged). New files: `docs/customer-audits/_template.md`, `docs/postmortems/_template.md`. Modified: `docs/HANDOFF.md`.
+
+### v1.0.9 — W3 batch H (CI hygiene + plugin pinning + deploy runbook) (2026-05-07)
+
+| Wave | Total | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 27 | 8 | 2 | 17 | 0 |
+| W3 | 34 | 23 | 0 | 11 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **90** | **42** | **6** | **42** | **0** |
+
+Three more W3 tickets closed — CI lint hardening + Grafana plugin pinning + production deploy-log runbook. Verified count crosses parity with Pending (42 / 42). Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+
+**W3 Verified added in batch H (3):** R-MIGR-LINT-001 (CI step forbidding DROP / TRUNCATE in migrations w/o `-- ALLOW-DROP:` marker — H-14 forward-only-migrations enforcement), R-INFRA-GRAFANA-PLUGINS-001 (pinned plugin versions in `docker-compose.yml` — F-MED-004 closure), R-RUNBOOK-DEPLOY-001 (production deployment-log template at `docs/runbooks/deployment-log-template.md` with 12 H-12 checkpoints — H-12 doctrine closure).
+
+Backend Jest 340 / 340 (unchanged), backend ESLint clean (no source touched), frontend ESLint + tsc clean (unchanged), markdownlint 0, custom lint-docs.js 0 (4 allowlisted warnings unchanged), all YAML files (docker-compose + ci.yml) valid via `js-yaml` round-trip. New files: `docs/runbooks/deployment-log-template.md`. Modified: `.github/workflows/ci.yml`, `docker-compose.yml`.
 
 ---
 

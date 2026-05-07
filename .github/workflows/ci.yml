@@ -162,6 +162,27 @@ jobs:
         working-directory: frontend
         run: npm audit signatures --workspaces=false --include=dev
 
+      # R-MIGR-LINT-001 — H-14 (migrations forward-only) enforcement.
+      # Forbid DROP / TRUNCATE in committed migrations. The exception
+      # documented in HANDOFF Appendix A (rollback of a v1.x feature
+      # via a new explicit-DROP migration) is allow-listed by the
+      # commit author marking the file with an inline comment of the
+      # form `-- ALLOW-DROP: <reason>`. Otherwise: fail-closed.
+      - name: Forbid DROP/TRUNCATE in migrations (R-MIGR-LINT-001)
+        run: |
+          set -euo pipefail
+          if grep -E '^DROP\b|^TRUNCATE\b' backend/src/db/migrations/*.sql 2>/dev/null; then
+            # Re-check excluding files that explicitly allow it.
+            offenders=$(grep -lE '^DROP\b|^TRUNCATE\b' backend/src/db/migrations/*.sql)
+            for f in $offenders; do
+              if ! grep -q '^-- ALLOW-DROP:' "$f"; then
+                echo "::error file=$f::Forbidden DROP/TRUNCATE without '-- ALLOW-DROP: <reason>' marker (doctrine H-14)" >&2
+                exit 1
+              fi
+            done
+          fi
+          echo "Migrations lint clean — no forbidden DROP/TRUNCATE without ALLOW-DROP marker."
+
       - name: Trivy config scan
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
