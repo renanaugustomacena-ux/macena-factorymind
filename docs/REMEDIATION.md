@@ -624,7 +624,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** RDS cluster — re-encryption requires planned downtime or blue-green migration.
 - **Rollback plan:** Aurora supports key migration; rollback to AWS-managed key possible but uncommon.
 - **Effort:** L.
-- **Status:** Pending.
+- **Status:** Code complete (2026-05-07). `terraform/modules/secrets/main.tf` provisions `aws_kms_key.factorymind` with `enable_key_rotation = true` (annual), `deletion_window_in_days = 30`, and a key policy granting `rds.amazonaws.com` and `secretsmanager.amazonaws.com` service principals + the account root. New `output kms_key_arn`. `terraform/modules/db/main.tf` accepts `var.kms_key_arn` (nullable for dev) and threads it to `aws_rds_cluster.kms_key_id`. `terraform validate` clean. Verified flips after `terraform apply` against the AWS account confirms the cluster's `KmsKeyId` matches the CMK ARN.
 
 ### R-RDS-EGRESS-001 — Restrict RDS egress security-group to DNS + CloudWatch + KMS endpoints.
 
@@ -641,7 +641,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** RDS networking.
 - **Rollback plan:** revert.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Code complete (2026-05-07). 0.0.0.0/0 egress removed in BOTH `terraform/modules/db/main.tf` and the parallel inline SG in `terraform/main.tf` (the audit cited the module; the inline duplicate was found during the cluster sweep — fixing both keeps a future `terraform state mv` migration safe). Allow-list: DNS UDP+TCP inside VPC; S3 prefix list (backups); KMS prefix list (unwrap); CloudWatch Logs prefix list (engine logs); CloudWatch Monitoring prefix list (cluster telemetry — modules-only). All prefix lists looked up by `name = com.amazonaws.<region>.<service>`. `terraform validate` clean. Verified flips after `terraform apply` confirms the resolved prefix lists in the target region.
 
 ### R-K8S-NETPOL-001 — Add fine-grained NetworkPolicy beyond default-deny.
 
