@@ -394,7 +394,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** N/A.
 - **Communication:** customer-facing privacy-notice update.
 - **Effort:** L (counsel review takes time).
-- **Status:** Pending.
+- **Status:** Drafted (2026-05-07). Engineering draft at `legal/TIA-INFLUXDATA.md` v0.9 — ~7000 words, follows the EDPB Recommendations 01/2020 six-step methodology, carries 12 doctrine rules T-1..T-12, identifies the legal-landscape assessment (§ 5.1) and contractual-measures statements (§ 5.4) as items requiring counsel verification (incl. InfluxData's DPF self-certification status, Article 5(1)(f) reading post-EO 14086, currency of the InfluxData Cloud DPA wording). Technical and organisational supplementary measures (§§ 5.2, 5.3) are committed to architecture: operator-ID pseudonymisation at MQTT ingest, free-text scrubbing, customer-managed-key encryption-at-rest in EU KMS, TLS 1.3 in transit. Migration plan to fully-EU-sovereign InfluxDB OSS in `eu-south-1` Milano specified as a 90-day fallback (§ 8.3). Flips to Verified after counsel signs the document head's `Sign-off line` and the `valid_through` date is populated.
 
 ### R-CI-AUDIT-001 — Remove `|| true` masking from npm audit + fail CI on high-severity Trivy findings.
 
@@ -1684,7 +1684,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-OPCUA-VALIDATE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | 17 unit cases + live invocation inside `factorymind-backend` container: AWS-metadata IP literal `opc.tcp://169.254.169.254:4840/` returns `{ok:false, reason:"Host metadata-service vietato"}`; canonical `opc.tcp://plc01.factory.local:4840/` returns `{ok:true}`. |
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |
 | R-GRAFANA-PG-TLS-001 | W1 | Pending | TBD | TBD | — |
-| R-TIA-001 | W1 | Pending | TBD | TBD | — |
+| R-TIA-001 | W1 | Drafted | 2026-05-07 | — | legal/TIA-INFLUXDATA.md v0.9 (engineering draft, ~7000 words). Awaits counsel review of §§ 5.1, 5.4 + DPF self-certification verification. Flips to Verified after sign-off line is signed and `valid_through` populated. |
 | R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | YAML lint via backend/tests/ci-security-gates.test.js (5 cases) + live `npm audit --production --audit-level=high` on a `lodash@4.17.10` fixture exits with RC=1 / 1 critical severity vulnerability ("Command Injection in lodash"). Backend's own audit returns RC=0 (clean) — gate is calibrated. |
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
