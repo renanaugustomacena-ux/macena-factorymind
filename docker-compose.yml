@@ -70,6 +70,11 @@ services:
     image: eclipse-mosquitto:2
     container_name: factorymind-mosquitto
     restart: unless-stopped
+    # R-MQTT-ANON-001: broker requires authentication. install.sh seeds
+    # ./mosquitto/config/passwd with the MQTT_USERNAME/MQTT_PASSWORD pair.
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-backend}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
       - mosquitto-data:/mosquitto/data
@@ -78,7 +83,9 @@ services:
       - "1883:1883"   # MQTT over TCP
       - "9001:9001"   # MQTT over WebSocket (frontend subscribers)
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 3 -q 0 || exit 1"]
+      test:
+        - CMD-SHELL
+        - mosquitto_sub -h localhost -p 1883 -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" -t '$$SYS/broker/uptime' -C 1 -W 3 -q 0 || exit 1
       interval: 10s
       timeout: 5s
       retries: 6

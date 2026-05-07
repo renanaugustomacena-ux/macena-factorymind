@@ -28,9 +28,16 @@ FactoryMind is a production-ready Industrial IoT template that turns a Mosquitto
 ## Quick Start
 
 ```bash
-cp .env.example .env
-docker compose up --build
+./install.sh                 # interactive (≈ 10–15 min on a clean machine)
+FM_UNATTENDED=1 ./install.sh # automated: random secrets, mozzecane defaults
 ```
+
+The installer is the canonical bootstrap path (HANDOFF doctrine **H-1**).
+It generates strong secrets, writes `.env`, provisions the Mosquitto
+password file (`R-MQTT-ANON-001` — the broker rejects anonymous since
+v1.0), then runs `docker compose up -d --build`. A bare `docker compose up`
+without prior install.sh will fail at broker boot because the password
+file is missing.
 
 Then open:
 

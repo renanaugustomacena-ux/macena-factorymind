@@ -297,7 +297,7 @@ Each ticket below uses the canonical schema:
 - **Rollback plan:** `git revert <sha>`; previous `mosquitto.conf` carries `allow_anonymous true` and dev clients connect without auth.
 - **Communication:** changelog entry; no customer notice required (no Tier 2 customer deployed yet at the time of this fix).
 - **Effort:** M (≤ 1 day; the change itself is small but the install.sh wiring + test cover takes time).
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — `mosquitto/config/mosquitto.conf` flips `allow_anonymous` to `false` and adds `password_file /mosquitto/config/passwd` + `acl_file /mosquitto/config/acl`. `install.sh` provisions the passwd file via a transient `eclipse-mosquitto:2` container running `mosquitto_passwd -b -c` (no host package required), running as the invoking user via `--user $(id -u):$(id -g)`. `docker-compose.yml` exposes `MQTT_USERNAME`/`MQTT_PASSWORD` to the broker and the healthcheck authenticates with them. README rewrites the Quick Start to point at `./install.sh` (the bare `docker compose up` path now fails by design at broker boot — anonymous publish is no longer reachable). `mosquitto/config/passwd` added to `.gitignore`. Coverage in `backend/tests/mosquitto-config.test.js` (5 cases). Integration shell test stubbed at `tests/integration/mosquitto-no-anon.sh` (ticket R-CI-INTEGRATION-001 wires it into CI).
 - **Why this remediation, not another:**
   - Alternative 1 — keep `allow_anonymous true` and document explicit override for production: rejected because doctrine **H-1** clean-machine bootstrap should produce a hardened state by default.
   - Alternative 2 — use mTLS instead of password auth: deferred to W2 (R-MQTT-MTLS-001) for production; mTLS is harder to set up for a Tier 2 SME customer's dev environment.
@@ -1679,7 +1679,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 
 | Ticket ID | Wave | Status | Implementer | Verifier | Date |
 |---|---|---|---|---|---|
-| R-MQTT-ANON-001 | W1 | Pending | TBD | TBD | — |
+| R-MQTT-ANON-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/mosquitto-config.test.js — 5 cases (allow_anonymous false, no exec true line, password_file + acl_file directives, backend user in ACL) |
 | R-MQTT-TLS-001 | W1 | Pending | TBD | TBD | — |
 | R-OPCUA-VALIDATE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/opcua-endpoint-validator.test.js — 17 cases (12 reject, 3 accept, plus malformed/empty) |
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |

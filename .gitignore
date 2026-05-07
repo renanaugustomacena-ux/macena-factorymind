@@ -38,6 +38,8 @@ frontend/build/
 .env.test.local
 .env.production.local
 .env.*.local
+.env.backup.*
+mosquitto/config/passwd
 *.pem
 *.key
 *.crt

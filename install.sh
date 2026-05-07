@@ -255,13 +255,39 @@ chmod 600 .env
 ok "File .env scritto con permessi 600 (solo l'utente corrente lo legge)."
 
 # ---------------------------------------------------------------------------
-# 6. Avvia lo stack.
+# 6. Provisiona il password file Mosquitto (R-MQTT-ANON-001 / F-CRIT-001).
+#
+# allow_anonymous=false in mosquitto.conf richiede /mosquitto/config/passwd.
+# Lo generiamo via container effimero usando mosquitto_passwd dell'immagine
+# ufficiale, evitando di richiedere il pacchetto mosquitto-clients sull'host.
+# La rigenerazione avviene a ogni install.sh — coerente con la rigenerazione
+# di .env. I client MQTT (backend, simulatore) leggono la stessa password
+# da MQTT_USERNAME=backend / MQTT_PASSWORD nel .env.
+# ---------------------------------------------------------------------------
+log "Provisiono Mosquitto password file..."
+MQTT_USERNAME="${MQTT_USERNAME:-backend}"
+sed_replace MQTT_USERNAME "$MQTT_USERNAME"
+PASSWD_PATH="$SCRIPT_DIR/mosquitto/config/passwd"
+rm -f "$PASSWD_PATH"
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$SCRIPT_DIR/mosquitto/config:/conf" \
+  -e MQTT_USERNAME="$MQTT_USERNAME" \
+  -e MQTT_PASSWORD="$MQTT_PASSWORD" \
+  eclipse-mosquitto:2 \
+  sh -c 'mosquitto_passwd -b -c /conf/passwd "$MQTT_USERNAME" "$MQTT_PASSWORD"' \
+  || die "Generazione mosquitto/config/passwd fallita."
+chmod 640 "$PASSWD_PATH" 2>/dev/null || true
+ok "Password file Mosquitto generato (utente=$MQTT_USERNAME)."
+
+# ---------------------------------------------------------------------------
+# 7. Avvia lo stack.
 # ---------------------------------------------------------------------------
 log "Costruzione immagini e avvio container (può richiedere 5-8 minuti la prima volta)..."
 docker compose up -d --build
 
 # ---------------------------------------------------------------------------
-# 7. Attesa health del backend.
+# 8. Attesa health del backend.
 # ---------------------------------------------------------------------------
 log "Attendo che il backend diventi sano (timeout 180s)..."
 HEALTH_URL="http://localhost:3002/api/health"
@@ -282,7 +308,7 @@ for i in $(seq 1 60); do
 done
 
 # ---------------------------------------------------------------------------
-# 8. Riepilogo finale.
+# 9. Riepilogo finale.
 # ---------------------------------------------------------------------------
 cat <<EOF
 
