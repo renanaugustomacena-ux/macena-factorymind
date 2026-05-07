@@ -515,7 +515,7 @@ Each ticket below uses the canonical schema:
 - **Regression test:** CD smoke deploys with a digest-pinned image and confirms the pod starts.
 - **Blast radius:** Deployment manifests.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Code complete (2026-05-07). cd.yml gives every build-push-action step an id (so its `outputs.digest` is referenceable), emits `artifacts/image-digests.env` with full `IMAGE@sha256:...` strings for backend/frontend/simulator, and the deploy-staging job downloads that artifact + sed-rewrites `k8s/deployment.yaml` from tag form to digest form. A grep guard fails the job if any tag-form image reference survives the rewrite. Coverage: `backend/tests/cd-supply-chain.test.js` 7 cases. Verified flips on first observed CD run.
 
 ### R-SUPPLY-001 — Implement Cosign signing in CD; add Kyverno verification at admission.
 
@@ -529,7 +529,7 @@ Each ticket below uses the canonical schema:
   - Cosign signature verifiable via `cosign verify --certificate-identity ... --certificate-oidc-issuer https://token.actions.githubusercontent.com ghcr.io/...`.
 - **Exit criteria (W2 portion):** Kyverno installed; `verifyImages` policy applied at admission.
 - **Effort:** M (W1) + L (W2).
-- **Status:** Pending.
+- **Status:** Code complete for W1 portion (2026-05-07); W2 (Kyverno verifyImages) still Pending. cd.yml installs `sigstore/cosign-installer@v3 cosign-release: v2.4.1` and runs `cosign sign --yes` against each image's `@sha256:<digest>` reference, using `id-token: write` for keyless OIDC (signature lands in the public Sigstore Rekor log under the GitHub OIDC issuer with the repo's identity). build-push-action also enables `provenance: true` and `sbom: true` so SLSA provenance attestations and SBOM attestations are pushed alongside. Coverage: backend/tests/cd-supply-chain.test.js. Verified W1 flips on first observed CD run; Verified W2 requires R-K8S-KYVERNO-001 in W2.
 
 ### R-WS-AUTH-001 — Add JWT validation to WebSocket handshake.
 
@@ -1691,8 +1691,8 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-CONTACT-ESCAPE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/contact-html-injection.test.js — asserts no `html:` field on nodemailer + text-only body + honeypot-before-sendMail |
 | R-GDPR-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/gdpr-service.test.js (9 unit cases) + live ops drill: export-subject.sh dumps Art.15/20 JSON, exits 64 on missing subject; erase-subject.sh soft-deletes (deletion_requested_at populated, tokens revoked, audit row written), idempotent retry returns "already_erased" |
 | R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | Dockerfile-text unit asserts + live container: `docker exec factorymind-frontend whoami` → `nginx`; `curl -sI http://localhost:5173/` → HTTP/1.1 200 OK Server: nginx/1.29.8. Rewritten top-level nginx.conf with /tmp temp paths boots clean. |
-| R-K8S-DIGEST-001 | W1 | Pending | TBD | TBD | — |
-| R-SUPPLY-001 | W1+W2 | Pending | TBD | TBD | — |
+| R-K8S-DIGEST-001 | W1 | Code complete | 2026-05-07 | — | cd.yml renders k8s/deployment.yaml with `image@sha256:<digest>` substitution before kubectl apply; sanity-check fails the deploy if any tag-form survives. backend/tests/cd-supply-chain.test.js (7 cases) blocks textual regression. Verified flips on first observed CD run. |
+| R-SUPPLY-001 | W1 (signing) + W2 (verification) | Code complete (W1 portion) | 2026-05-07 | — | cd.yml installs `sigstore/cosign-installer@v3` and runs `cosign sign --yes <image>@sha256:<digest>` keyless via GitHub OIDC for backend / frontend / simulator; build-push-action emits `provenance: true` + `sbom: true`; SBOM step references the digest. W2 Kyverno verifyImages policy still pending. |
 | R-WS-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-DPA-FILL-001 | W1 | Pending | TBD | TBD | — |
 | R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
