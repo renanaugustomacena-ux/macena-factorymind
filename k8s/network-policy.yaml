@@ -1,0 +1,134 @@
+# =============================================================================
+# R-K8S-NETPOL-001 — F-MED-001 closure.
+#
+# Fine-grained NetworkPolicy beyond the default-deny + backend-allow defined
+# in `namespace.yaml`. Applies to in-cluster data-plane pods:
+#
+#   - postgres-allow:   ingress from backend only
+#   - influxdb-allow:   ingress from backend + grafana only
+#   - mosquitto-allow:  ingress from backend + iot-simulator + edge-gateway
+#                       traffic via the broker-ingress (Mosquitto MQTTS 8883)
+#                       hosted in the cluster's ingress-controller layer
+#
+# Production deployments where Postgres / Influx are AWS-managed externals
+# (RDS / InfluxData Cloud) bypass these policies — those flows are gated at
+# the security-group / VPC-egress layer. The egress allowance for those
+# external endpoints is covered by `backend-allow.spec.egress` in
+# `namespace.yaml`. These in-cluster policies fail-closed when the data-plane
+# pods are present and have no effect when they are absent.
+#
+# Convention: pod-selectors target `app.kubernetes.io/component: <name>`.
+# Deployments / StatefulSets for Postgres / InfluxDB / Mosquitto / Grafana /
+# iot-simulator MUST set their `spec.template.metadata.labels` accordingly.
+# Apply this manifest AFTER `namespace.yaml`.
+# =============================================================================
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: influxdb-allow
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: influxdb
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: influxdb
+  policyTypes:
+    - Ingress
+  ingress:
+    # Backend writes telemetry / queries OEE.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - port: 8086
+          protocol: TCP
+    # Grafana reads time-series for dashboards. Two paths:
+    #   (a) in-namespace pod with component=grafana
+    #   (b) external Grafana in observability namespace (helm chart default)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: grafana
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: 8086
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mosquitto-allow
+  namespace: factorymind
+  labels:
+    app.kubernetes.io/name: factorymind
+    app.kubernetes.io/component: mosquitto
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: mosquitto
+  policyTypes:
+    - Ingress
+  ingress:
+    # Backend publishes commands + subscribes to telemetry.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - port: 1883
+          protocol: TCP
+        - port: 8883
+          protocol: TCP
+    # IoT simulator publishes test traffic. Excluded in production overlays
+    # via Kustomize patch but harmless when the pod is absent.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: iot-simulator
+      ports:
+        - port: 1883
+          protocol: TCP
+        - port: 8883
+          protocol: TCP
+    # Edge gateway traffic enters via a designated MQTT-ingress controller
+    # (e.g. the `mqtt-ingress` Helm chart or a dedicated NLB → broker
+    # passthrough in production). Inbound is on TLS 8883 only.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-mqtt
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: edge-gateway
+      ports:
+        - port: 8883
+          protocol: TCP
