@@ -20,16 +20,42 @@ const { sendProblem } = require('./errorHandler');
 
 const PINNED_ALGORITHMS = ['HS256'];
 
-function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const [scheme, token] = header.split(' ');
+// R-FRONTEND-COOKIE-AUTH-001 (F-HIGH-001): dual-mode auth.
+// The middleware accepts EITHER:
+//   1. `Authorization: Bearer <token>` header (legacy SPA path).
+//   2. `factorymind_session` HttpOnly cookie (new path; XSS cannot read).
+// During the transition both work; once the frontend cuts over to cookie-only
+// the Bearer path can be retired (a follow-up R-FRONTEND-BEARER-RETIRE-001).
+const SESSION_COOKIE = 'factorymind_session';
 
-  if (!token || (scheme || '').toLowerCase() !== 'bearer') {
+function parseCookieValue(req, name) {
+  const header = req.headers.cookie || '';
+  for (const piece of header.split(';')) {
+    const [k, ...rest] = piece.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('=') || '');
+  }
+  return null;
+}
+
+function extractToken(req) {
+  const auth = req.headers.authorization || '';
+  if (auth.toLowerCase().startsWith('bearer ')) {
+    return { source: 'bearer', token: auth.slice(7).trim() };
+  }
+  const cookieTok = parseCookieValue(req, SESSION_COOKIE);
+  if (cookieTok) return { source: 'cookie', token: cookieTok };
+  return { source: null, token: null };
+}
+
+function requireAuth(req, res, next) {
+  const { source, token } = extractToken(req);
+
+  if (!token) {
     if (!config.isProduction) {
       req.user = { sub: 'dev-anonymous', role: 'admin', email: 'dev@factorymind.local', scope: [] };
       return next();
     }
-    return sendProblem(res, 401, 'Missing bearer token', req);
+    return sendProblem(res, 401, 'Missing authentication (cookie or bearer)', req);
   }
   try {
     const payload = jwt.verify(token, config.security.jwtSecret, {
@@ -41,6 +67,7 @@ function requireAuth(req, res, next) {
       return sendProblem(res, 401, 'Refresh token not accepted on protected endpoint', req);
     }
     req.user = payload;
+    req.authSource = source;
     return next();
   } catch (err) {
     return sendProblem(res, 401, `Invalid token: ${err.message}`, req);
@@ -71,4 +98,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole, PINNED_ALGORITHMS };
+module.exports = { requireAuth, requireRole, PINNED_ALGORITHMS, SESSION_COOKIE, extractToken };

@@ -29,6 +29,37 @@ const lockout = require('../middleware/lockout');
 const audit = require('../middleware/audit');
 const tokens = require('../services/auth-tokens');
 const gdpr = require('../services/gdpr');
+const config = require('../config');
+const { SESSION_COOKIE } = require('../middleware/auth');
+
+// Build the Set-Cookie value for the session cookie. HttpOnly+SameSite=Lax
+// blocks JS read-out (F-HIGH-001) and cross-site form-submit CSRF; Secure
+// is added in production (the cleartext fallback in dev is acceptable
+// because dev uses self-signed TLS or plain HTTP). Path scoped to /api so
+// the cookie isn't sent on static-asset requests.
+function sessionCookieValue(token, maxAgeSeconds) {
+  const parts = [
+    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
+    'Path=/api',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSeconds}`
+  ];
+  if (config.isProduction) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function clearSessionCookieValue() {
+  const parts = [
+    `${SESSION_COOKIE}=`,
+    'Path=/api',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0'
+  ];
+  if (config.isProduction) parts.push('Secure');
+  return parts.join('; ');
+}
 
 const router = Router();
 
@@ -161,6 +192,12 @@ router.post('/login', async (req, res, next) => {
       userAgent: req.headers['user-agent'] || ''
     });
 
+    // R-FRONTEND-COOKIE-AUTH-001 (F-HIGH-001): set HttpOnly session cookie
+    // alongside the body — both shapes are returned during the dual-mode
+    // transition. Cookie Max-Age tied to the access-token TTL (seconds).
+    const accessTtlSeconds = parseTtlSeconds(config.security.accessTokenTtl, 900);
+    res.append('Set-Cookie', sessionCookieValue(accessToken, accessTtlSeconds));
+
     return res.json({
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -170,6 +207,19 @@ router.post('/login', async (req, res, next) => {
     });
   } catch (err) { return next(err); }
 });
+
+// Parse a TTL string like "15m", "1h", "30s" into seconds. Falls back to
+// `fallback` on unparsable input. The same JWT TTL string is consumed by
+// auth-tokens.mintAccessToken via jsonwebtoken's `expiresIn` so the cookie
+// expiry matches the JWT exp claim.
+function parseTtlSeconds(ttlString, fallback) {
+  const m = String(ttlString || '').match(/^(\d+)\s*([smhd]?)$/);
+  if (!m) return fallback;
+  const n = Number(m[1]);
+  const unit = m[2] || 's';
+  const mul = { s: 1, m: 60, h: 3600, d: 86400 }[unit];
+  return n * mul;
+}
 
 // ==========================================================================
 // POST /api/users/token/refresh  (public — uses refresh token)
@@ -226,6 +276,9 @@ router.post('/logout', requireAuth, async (req, res, next) => {
       success: true,
       userAgent: req.headers['user-agent'] || ''
     });
+    // Clear the session cookie even if the client used Bearer — covers the
+    // dual-mode transition where the same browser may carry both.
+    res.append('Set-Cookie', clearSessionCookieValue());
     return res.status(204).send();
   } catch (err) { return next(err); }
 });

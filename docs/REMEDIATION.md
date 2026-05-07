@@ -428,6 +428,7 @@ Each ticket below uses the canonical schema:
 - **Regression test:** end-to-end test (Playwright in UPLIFT u-frontend-e2e; manual test for now) that confirms auth flow works post-migration.
 - **Blast radius:** Auth flow — every authenticated route. Customer-impacting (one-time logout).
 - **Rollback plan:** dual-mode middleware (accept both cookie + Bearer) for one release cycle; can fall back to Bearer-only.
+- **Status:** Verified for dual-mode (2026-05-07). Backend `requireAuth` now accepts EITHER `Authorization: Bearer` OR `factorymind_session` cookie; `/api/users/login` sets the HttpOnly + SameSite=Lax + Secure-in-prod cookie alongside the response body so existing Bearer flows keep working. CSRF double-submit middleware (already present) gates state-changing requests on cookie path while exempting Bearer. Frontend `client.ts` flips `withCredentials: true`, mirrors `factorymind_csrf` cookie value into `X-CSRF-Token` header on POST/PUT/PATCH/DELETE, redirects to `/login?next=` on 401. Live drill against the running stack confirmed: login response carries both Set-Cookie headers; subsequent `GET /api/users/me` with the cookie alone (no Bearer) returns 200 with the user payload. The full Bearer retirement (`R-FRONTEND-BEARER-RETIRE-001` in W2) follows once a release cycle of dual-mode confirms no regressions.
 - **Communication:** customer notice (template in § 10) — "Maintenance window: existing sessions will require re-login on <date>".
 - **Effort:** L.
 - **Status:** Pending.
@@ -548,7 +549,7 @@ Each ticket below uses the canonical schema:
 - **Regression test:** integration test that confirms WS connect requires auth.
 - **Blast radius:** WebSocket flow.
 - **Effort:** L.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `backend/src/ws/server.js` refactored to `noServer: true` so the upgrade can be authenticated before the protocol switch: a `httpServer.on('upgrade', ...)` handler runs `authenticateUpgrade(req)` which extracts a JWT from (in priority) `Authorization: Bearer`, the `factorymind_session` cookie, the `Sec-WebSocket-Protocol: bearer.<token>` subprotocol, or `?access_token=<token>` query string, then verifies HS256 + rejects refresh-typed tokens. Failure returns HTTP 401 + `Connection: close` on the raw socket — the client gets a proper HTTP error rather than a silent disconnect. `backend/tests/ws-auth.test.js` 7 cases (3 reject paths + 4 accept paths covering each token source). Live: WS open with cookie, dev fallback active in development.
 
 ### R-DPA-FILL-001 — Fill DPA sub-processor list and version dates before first paying customer.
 
@@ -1688,14 +1689,14 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-GRAFANA-PG-TLS-001 | W1 | Verified (dev) | 2026-05-07 | 2026-05-07 | postgres image started with `ssl=on`, cert paths via wrapper that copies/chmods at startup; `pg_stat_ssl` shows TLSv1.3 + TLS_AES_256_GCM_SHA384 cipher; Grafana datasource health endpoint returns "Database Connection OK" with `sslmode: require`. |
 | R-TIA-001 | W1 | Drafted | 2026-05-07 | — | legal/TIA-INFLUXDATA.md v0.9 (engineering draft, ~7000 words). Awaits counsel review of §§ 5.1, 5.4 + DPF self-certification verification. Flips to Verified after sign-off line is signed and `valid_through` populated. |
 | R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | YAML lint via backend/tests/ci-security-gates.test.js (5 cases) + live `npm audit --production --audit-level=high` on a `lodash@4.17.10` fixture exits with RC=1 / 1 critical severity vulnerability ("Command Injection in lodash"). Backend's own audit returns RC=0 (clean) — gate is calibrated. |
-| R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
-| R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
+| R-FRONTEND-COOKIE-AUTH-001 | W1 | Verified (dual-mode) | 2026-05-07 | 2026-05-07 | backend dual-mode auth (Bearer OR HttpOnly cookie); /api/users/login Set-Cookie; CSRF double-submit middleware in place; frontend client.ts withCredentials + CSRF mirror; live login + cookie-only /me round-trip clean; backend/tests/auth-cookie.test.js 7 cases. Bearer retirement → R-FRONTEND-BEARER-RETIRE-001 (W2). |
+| R-FRONTEND-AUTH-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | new pages/Login.tsx + components/RequireAuth.tsx; App.tsx routes split into public (/login) + RequireAuth-wrapped; axios 401 interceptor redirects to /login?next=. Built bundle contains "Accesso al cruscotto", "Verifica sessione", "factorymind_csrf", "X-CSRF-Token" markers. |
 | R-CONTACT-ESCAPE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/contact-html-injection.test.js — asserts no `html:` field on nodemailer + text-only body + honeypot-before-sendMail |
 | R-GDPR-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/gdpr-service.test.js (9 unit cases) + live ops drill: export-subject.sh dumps Art.15/20 JSON, exits 64 on missing subject; erase-subject.sh soft-deletes (deletion_requested_at populated, tokens revoked, audit row written), idempotent retry returns "already_erased" |
 | R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | Dockerfile-text unit asserts + live container: `docker exec factorymind-frontend whoami` → `nginx`; `curl -sI http://localhost:5173/` → HTTP/1.1 200 OK Server: nginx/1.29.8. Rewritten top-level nginx.conf with /tmp temp paths boots clean. |
 | R-K8S-DIGEST-001 | W1 | Code complete | 2026-05-07 | — | cd.yml renders k8s/deployment.yaml with `image@sha256:<digest>` substitution before kubectl apply; sanity-check fails the deploy if any tag-form survives. backend/tests/cd-supply-chain.test.js (7 cases) blocks textual regression. Verified flips on first observed CD run. |
 | R-SUPPLY-001 | W1 (signing) + W2 (verification) | Code complete (W1 portion) | 2026-05-07 | — | cd.yml installs `sigstore/cosign-installer@v3` and runs `cosign sign --yes <image>@sha256:<digest>` keyless via GitHub OIDC for backend / frontend / simulator; build-push-action emits `provenance: true` + `sbom: true`; SBOM step references the digest. W2 Kyverno verifyImages policy still pending. |
-| R-WS-AUTH-001 | W1 | Pending | TBD | TBD | — |
+| R-WS-AUTH-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | ws/server.js refactored to noServer + httpServer.on('upgrade') interceptor that JWT-validates from header / cookie / `Sec-WebSocket-Protocol bearer.<token>` / `?access_token=` query (in that priority); rejects with HTTP 401 before protocol switch in production. backend/tests/ws-auth.test.js 7 cases (valid + invalid + each source). Live verify: WS open with cookie, refused without auth in production unit-test path. |
 | R-DPA-FILL-001 | W1 | Pending | TBD | TBD | — |
 | R-CONFIG-MQTT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/config-prod-guardrails.test.js — `rifiuta MQTT_PASSWORD vuota`, `rifiuta MQTT_PASSWORD troppo corta` |
 | R-RUNBOOK-001 | W1 | Verified | Renan | Renan (self-review) | 2026-05-07 |
