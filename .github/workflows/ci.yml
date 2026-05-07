@@ -135,20 +135,24 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
+      # R-CI-AUDIT-001 (F-CRIT-007): security gates are blocking — no
+      # `|| true` masking, Trivy exits non-zero on HIGH/CRITICAL, Gitleaks
+      # exit code is honoured. Doctrine R-3 forbids re-introducing masks.
       - name: npm audit (backend)
         working-directory: backend
-        run: npm audit --production --audit-level=high || true
+        run: npm audit --production --audit-level=high
 
       - name: npm audit (frontend)
         working-directory: frontend
-        run: npm audit --production --audit-level=high || true
+        run: npm audit --production --audit-level=high
 
       - name: Trivy config scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: config
           ignore-unfixed: true
-          exit-code: "0"
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
 
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2

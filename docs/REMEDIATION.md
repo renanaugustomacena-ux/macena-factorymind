@@ -411,7 +411,7 @@ Each ticket below uses the canonical schema:
 - **Blast radius:** CI workflow only.
 - **Rollback plan:** revert.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — `.github/workflows/ci.yml` security job: `|| true` removed from both `npm audit` invocations; Trivy step pinned to `severity: HIGH,CRITICAL` + `exit-code: 1`; Gitleaks defaults to non-zero exit on detection. Regression coverage in `backend/tests/ci-security-gates.test.js` (5 cases) blocks future masking re-introduction per doctrine R-3.
 - **Why this remediation, not another:** alternative — `audit-level=critical` only — rejected; HIGH is the OWASP-recommended gate.
 
 ### R-FRONTEND-COOKIE-AUTH-001 — Migrate frontend JWT auth from localStorage to HttpOnly cookies.
@@ -1685,7 +1685,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-TF-STATE-001 | W1 | Pending | TBD | TBD | — |
 | R-GRAFANA-PG-TLS-001 | W1 | Pending | TBD | TBD | — |
 | R-TIA-001 | W1 | Pending | TBD | TBD | — |
-| R-CI-AUDIT-001 | W1 | Pending | TBD | TBD | — |
+| R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/ci-security-gates.test.js — 5 cases asserting no `\|\| true` masking + Trivy HIGH/CRITICAL exit-1 |
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-CONTACT-ESCAPE-001 | W1 | Pending | TBD | TBD | — |
