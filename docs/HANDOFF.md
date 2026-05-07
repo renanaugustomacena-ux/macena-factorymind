@@ -1509,6 +1509,112 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 
 This is a security event: file a security incident even if fully mitigated, for trend analysis.
 
+### 8.11 Runbook — Disaster Recovery (region failover)
+
+**Closes** R-RUNBOOK-DR-001 (REMEDIATION § 6); pairs with R-DR-DRILL-001 (quarterly drill cadence in § 8 of REMEDIATION).
+
+**Scope.** Loss of the primary AWS region (eu-south-1, Milan) due to extended outage, regional control-plane failure, or accidental destructive change. Failover target is eu-central-1 (Frankfurt) — the second region in the same EU data-residency boundary that the GDPR / NIS2 commitment depends on.
+
+**Pre-conditions.** Before this runbook can execute end-to-end:
+
+- RDS Aurora cross-region read-replica in eu-central-1 (`terraform/modules/db/rds.tf`; the secondary cluster's `source_region` is the primary).
+- InfluxDB Cloud sub-region replication enabled (vendor feature; verified in TIA — `legal/TIA-INFLUXDATA.md` § 3.2).
+- Latest object backup of `s3://factorymind-state-prod` replicated to eu-central-1 via cross-region replication rule (Terraform `aws_s3_bucket_replication_configuration`).
+- Route 53 hosted zone with health-checked failover record for `api.factorymind.it` pointing at the regional ALB.
+- Operator has `AdministratorAccess` on the AWS account and `roles/dba` on RDS.
+- `kubectl` context for the `factorymind-failover` cluster in eu-central-1 (provisioned via Terraform `eks-failover` workspace).
+
+If any pre-condition is missing this runbook is **not executable** — fix the gap before the next drill rather than during a real incident.
+
+**Decision tree (5 minutes max).**
+
+1. **Is the primary cluster reachable at all?** `kubectl get nodes` against the eu-south-1 context. If it returns nodes (even if they are NotReady) the issue is likely intra-cluster, not regional — engage the appropriate § 8.3-8.10 runbook instead.
+2. **Is the AWS regional control plane reporting issues?** Check `https://health.aws.amazon.com/health/status` for eu-south-1. If the region itself is degraded, the failover decision is forced.
+3. **Is the data-loss window acceptable?** Aurora replication lag is typically < 5 s; in catastrophic primary failure the replica may be up to 60 s behind. Document the observed lag at the moment of failover (`SELECT * FROM aurora_global_db_status();` on the replica, or CloudWatch metric `AuroraGlobalDBReplicationLag`). Customer Success communicates the data-loss window to affected customers in the breach-notice template (§ 7).
+
+**Failover procedure.**
+
+1. **Promote the Aurora replica.**
+
+   ```bash
+   aws rds failover-global-cluster \
+     --global-cluster-identifier factorymind-prod-global \
+     --target-db-cluster-identifier arn:aws:rds:eu-central-1:<account>:cluster:factorymind-prod-eu-central-1 \
+     --region eu-central-1
+   ```
+
+   The promotion is asynchronous; expect 1-3 minutes for the cluster to accept writes. Monitor with:
+
+   ```bash
+   aws rds describe-global-clusters \
+     --global-cluster-identifier factorymind-prod-global \
+     --query 'GlobalClusters[0].GlobalClusterMembers[*].{Cluster:DBClusterArn,IsWriter:IsWriter}'
+   ```
+
+2. **Switch InfluxDB Cloud writes to the eu-central-1 endpoint.**
+
+   The failover endpoint is in the runtime config under `INFLUX_URL_FAILOVER`. Apply via Helm value override:
+
+   ```bash
+   helm upgrade factorymind-backend ./charts/factorymind-backend \
+     --namespace factorymind \
+     --kube-context factorymind-failover \
+     --set env.INFLUX_URL=$INFLUX_URL_FAILOVER \
+     --set env.INFLUX_TOKEN=$INFLUX_TOKEN_FAILOVER \
+     --reuse-values
+   ```
+
+3. **Update the Route 53 failover record.**
+
+   The `api.factorymind.it` record is configured with health-checked failover; in the normal case it flips automatically when the primary ALB health-check fails for ≥ 3 consecutive samples (90 s window). Manual cutover, if needed:
+
+   ```bash
+   aws route53 change-resource-record-sets \
+     --hosted-zone-id <ZONE_ID> \
+     --change-batch file://dr/route53-failover-cutover.json
+   ```
+
+   The change-batch JSON is checked in at `infrastructure/dr/route53-failover-cutover.json` (target state — file currently exists as a template; populate with real ARNs during the first drill).
+
+4. **Restore from backup if the replica diverged.**
+
+   If `aurora_global_db_status()` shows replication broken for > 60 s prior to incident, the replica may have lost late writes. Restore from PITR snapshot:
+
+   ```bash
+   aws rds restore-db-cluster-to-point-in-time \
+     --source-db-cluster-identifier factorymind-prod-eu-south-1 \
+     --db-cluster-identifier factorymind-prod-eu-central-1-restored \
+     --restore-to-time <ISO-8601> \
+     --use-latest-restorable-time \
+     --region eu-central-1
+   ```
+
+   For InfluxDB Cloud, contact InfluxData support via the dedicated breach line (number in `legal/TIA-INFLUXDATA.md` § 5.4) — the cross-region replica is async and may be up to 1 hour behind in worst case; a coordinated restore from their side may be required.
+
+**Verification checklist.**
+
+- [ ] `https://api.factorymind.it/api/health` returns 200 with all `dependencies.{postgres,influxdb,influxdb_tasks,mosquitto}.ok = true` (R-INFLUX-TASK-001 closure).
+- [ ] `https://api.factorymind.it/api/ready` returns 200 (all dependencies primed at least once).
+- [ ] `SELECT count(*) FROM attestazioni WHERE emessa_il > NOW() - INTERVAL '24 hours'` matches the pre-failover count within the documented data-loss window (Aurora replication lag).
+- [ ] Synthetic OEE for the canonical test fixture machine matches pre-failover value within 0.1 % (R-DR-DRILL-001 exit criterion).
+- [ ] `cosign verify --certificate-identity-regexp '.*github.com/factorymind.*' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' ghcr.io/factorymind/factorymind-backend@sha256:<digest>` succeeds against the digest deployed in eu-central-1 (image-signing chain integrity).
+- [ ] Active customer logins continue to work (cookie session domain matches `factorymind.it`, not region-specific subdomain).
+- [ ] Grafana dashboards re-pair against the failover Influx endpoint (one click in the data-source settings if not pre-provisioned).
+- [ ] Customer Success has sent the GDPR Art. 33 / NIS2 § 7 incident notice if the data-loss window exceeds the contractual SLA (see § 7).
+
+**Rollback (if failover proves unnecessary).**
+
+If the primary region recovers and the failover was precautionary, the rollback path is the inverse of the failover but requires:
+
+- Quiescing writes on the eu-central-1 cluster (read-only mode).
+- Replicating any new rows back to eu-south-1 via `pg_dump` + `pg_restore` of the affected tables.
+- Flipping Route 53 back to primary.
+- A second incident notice to customers if data was written during the failover that needs to migrate back.
+
+This is materially harder than the failover itself; the default disposition is to **stay in the failover region** until the next planned maintenance window allows a coordinated migration back. Doctrine: failover is a one-way door under load; the rollback decision should be deliberate, not reflexive.
+
+**Doctrine references.** R-7 (wave drift sign-off — a DR event triggers a post-incident wave assessment), H-22 (quarterly review — DR runbook freshness), A-12 (doctrine review cadence applies to this runbook).
+
 ### 8.PM — Postmortem template
 
 ```markdown

@@ -916,7 +916,7 @@ Each ticket below uses the canonical schema:
   - `.github/workflows/ci.yml` adds step `npm audit signatures` for backend + frontend.
   - Step fails build on missing/invalid signature unless explicitly allow-listed via project policy.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). `.github/workflows/ci.yml` (the `security` job) gains two new steps after the existing `npm audit` calls: `npm audit signatures (backend)` and `npm audit signatures (frontend)`, both invoked with `--workspaces=false --include=dev` so the verification covers the lockfile + devDependencies (which are part of the trusted build chain). Default behaviour fails the build on missing or invalid Sigstore signatures; allow-listing for unsigned packages would route through `npm config set signature-overrides` (none today). Pairs naturally with R-CI-AUDIT-001 (high-severity npm audit, already enforced) — together they enforce both vulnerability-freshness and supply-chain provenance on every push.
 
 ### R-CI-PIN-001 — Pin all GitHub Actions to specific SHAs (or version tags).
 
@@ -928,7 +928,7 @@ Each ticket below uses the canonical schema:
   - All `uses:` in `.github/workflows/*.yml` carry a SHA pin (e.g., `actions/checkout@<full-40-char-sha> # v4.1.7`).
   - Dependabot keeps SHAs current.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). All 37 `uses:` references across `ci.yml`, `cd.yml`, and `docs-lint.yml` rewritten from mutable tag form (`@v4`) to 40-char SHA form (`@<sha> # v4`); the `aquasecurity/trivy-action@master` reference (the most-exposed mutable ref — a branch tip moved by the action's owner) was pinned to `v0.36.0` (`a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8`). SHAs resolved via `git ls-remote refs/tags/<tag>` against each action's repo. New `.github/dependabot.yml` enrols the `github-actions` ecosystem (weekly cadence, Monday 07:00 Europe/Rome, 5 PR limit, `chore(ci)` commit prefix) so version updates land as PRs that refresh both the SHA and the trailing `# vX` comment in lockstep — preserving the immutable-reference property. Same `dependabot.yml` also subscribes the npm ecosystems (backend / frontend / iot-simulator), Docker (backend / frontend Dockerfiles), and Terraform for cohesive dep-update PRs. Verification: `grep -c "@v[0-9]\|@master\|@main" .github/workflows/*.yml` returns 0 across all three files; `grep "uses:" .github/workflows/*.yml | grep -c "@[0-9a-f]\{40\}"` returns 37 (all references SHA-pinned). All three workflow files parse as valid YAML (`js-yaml` round-trip).
 
 ### R-RUNBOOK-DR-001 — DR (disaster recovery) runbook.
 
@@ -943,7 +943,7 @@ Each ticket below uses the canonical schema:
   - InfluxDB restore procedure.
   - Verification checklist.
 - **Effort:** M.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07). New `HANDOFF.md` § 8.11 — "Runbook — Disaster Recovery (region failover)". Covers: pre-conditions inventory (Aurora cross-region replica, InfluxDB Cloud sub-region replication, S3 cross-region replication, Route 53 failover record, operator AdministratorAccess, kubectl context for failover cluster — explicitly noted as gating the runbook); 5-minute decision tree (cluster reachability / AWS regional health / data-loss window); failover procedure (Aurora `failover-global-cluster` + Influx endpoint switch via Helm + Route 53 cutover + PITR restore if replica diverged); 7-item verification checklist (api/health + api/ready + attestazioni count delta + synthetic OEE within 0.1% + cosign image signature verification + customer login continuity + Grafana data-source pairing + Art. 33 / NIS2 incident notice trigger); rollback section explicitly stating "failover is a one-way door under load" (default = stay in failover region until planned maintenance window). Pairs with R-DR-DRILL-001 (first drill exercises this runbook end-to-end). Doctrine references on the runbook itself: R-7 (post-incident wave assessment), H-22 (quarterly freshness review), A-12 (doctrine cadence).
 
 ### R-DR-DRILL-001 — Quarterly restore drill (Postgres + Influx).
 
@@ -1720,6 +1720,9 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-K8S-NETPOL-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `k8s/network-policy.yaml` ships `postgres-allow` (5432 from backend), `influxdb-allow` (8086 from backend + grafana + observability namespace), `mosquitto-allow` (1883/8883 from backend + iot-simulator + edge-gateway via `ingress-mqtt` namespace). Backend ingress / egress + default-deny preserved in `namespace.yaml` (untouched). Production AWS-managed externals (RDS / InfluxData Cloud) bypass the in-cluster policies — gated at SG / VPC-egress per backend-allow.spec.egress. Coverage: `backend/tests/k8s-network-policy.test.js` (10 cases) — structural YAML-text assertions. Honest gap (doctrine **H-20**): "smoke test that the cluster still functions" requires actual cluster access (agent has none from this seat); structural test + documented `kubectl apply` order (namespace → network-policy → rest) is the substitute. |
 | R-FRONTEND-i18n-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | Pre-fix: 15 distinct keys referenced in `frontend/src/**/*.{ts,tsx}` were missing from en.json + de.json (the `downtime_chart` subtree, `oee.{availability,performance,quality}_hint`, `dashboard.subtitle_*`, `machines.empty`, `reports.subtitle`, `reports.shift_current`, `alerts.subtitle`, `dashboard.{machines,alerts}_heading`); plus structural drift where en/de had `dashboard.oee.above_target` while it.json (source-of-truth) used `above_average`. Both en.json + de.json rewritten to match it.json structure verbatim; German translations done by-hand (soft gap: native re-review on first paying-customer engagement). Coverage: `backend/tests/i18n-key-audit.test.js` (the H-20 substitute for the named `tests/i18n-key-audit.sh`) walks frontend/src for `t('key.path')` references and asserts every one resolves in all three locale bundles — 70 / 70 cases green. |
 | R-ATTESTAZIONE-IDEMPOTENCY-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | Migration `008_attestazioni_idempotency.sql` adds `plan` + `content_sha256` + partial unique index on (device_id, anno_fiscale, plan) WHERE revocata_il IS NULL. Route POST `/devices/:id/attestazione/pdf`: computes content_sha256 over (destinatario, report-without-generated_at, year, plan); cache-hit returns cached pdf_bytes (no INSERT, X-Attestazione-Cached: true); content-differs → 409; `?force=true` admin → atomic BEGIN+revoke+INSERT+COMMIT via pool.connect(). Concurrency hardening (post-advisor): 23505 race on non-force INSERT triggers race-recovery lookup (X-Attestazione-Race-Recovery: true on cache, 409 on divergent winner); force-path TX failure → ROLLBACK + best-effort PDF delivery. Honest gap (doctrine **H-20**): exit criterion specified NEW table `attestazioni_issued`; implemented instead by extending existing `attestazioni` (already has pdf_bytes since 007 + device_id FK) — partial unique index achieves the same invariant; `device_id` used instead of spec's `machine_id` for schema alignment. Coverage: 10 new cases in `backend/tests/attestazione-route.test.js` including byte-equal integration regression + concurrency cases (23505 cache-hit, 23505 divergent → 409, force TX rollback). 31 / 31 attestazione tests green. |
+| R-NPM-PROVENANCE-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `.github/workflows/ci.yml` security job gains two `npm audit signatures` steps (backend + frontend) with `--workspaces=false --include=dev`. Default behaviour fails build on missing / invalid Sigstore signatures. Pairs with the existing high-severity `npm audit` (R-CI-AUDIT-001) — vulnerability-freshness + supply-chain provenance enforced on every push. |
+| R-CI-PIN-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | All 37 `uses:` references across `ci.yml` / `cd.yml` / `docs-lint.yml` rewritten from mutable tag form to 40-char SHA form (`@<sha> # vX`). `aquasecurity/trivy-action@master` (most-exposed mutable ref — a branch tip the action's owner can move) pinned to `v0.36.0` `a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8`. SHAs resolved via `git ls-remote refs/tags/<tag>`. New `.github/dependabot.yml` enrols `github-actions` (weekly Mon 07:00 Europe/Rome) plus npm (backend / frontend / simulator), Docker, and Terraform ecosystems. Verification: `grep -c "@v[0-9]\|@master\|@main"` returns 0; SHA-pin grep returns 37; all 3 workflows parse as valid YAML. |
+| R-RUNBOOK-DR-001 | W2 | Verified | 2026-05-07 | 2026-05-07 | `HANDOFF.md` § 8.11 ships the DR runbook — pre-conditions inventory (Aurora cross-region replica, Influx Cloud sub-region replication, S3 CRR, Route 53 failover, operator AdministratorAccess, kubectl context) explicitly gates execution; 5-minute decision tree; failover procedure (`aws rds failover-global-cluster` + Helm endpoint switch + Route 53 cutover + PITR restore if needed); 7-item verification checklist (api/health, api/ready, attestazioni count delta, synthetic OEE within 0.1%, cosign signature verification, customer login continuity, Art. 33 / NIS2 notice trigger); rollback section: "failover is a one-way door under load". Pairs with R-DR-DRILL-001 for the first drill exercise. |
 
 Updated quarterly (HANDOFF doctrine **H-22**).
 
@@ -1959,6 +1962,38 @@ Three W2 tickets closed in batch D ahead of the 2026-08-05 SLA — completing th
 The remaining `R-FRONTEND-BEARER-RETIRE-001` follow-on is time-gated separately (post-W1 dual-mode cohabitation cycle).
 
 Test-suite growth: 249 → 340 (+91 from batch D: 70 i18n key audit + 10 k8s netpol structure + 10 attestazione idempotency (incl. 3 concurrency advisor-catch cases) + 1 i18n bundle JSON validity / 30 → 32 test suites). Backend ESLint clean, frontend ESLint + tsc clean. New file: `backend/src/db/migrations/008_attestazioni_idempotency.sql`.
+
+### v1.0.6 — W2 batch E (CI supply-chain + DR runbook) (2026-05-07)
+
+| Wave | Total | Pending | In Progress | Verified | Closed |
+|---|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 | 0 |
+| W2 | 27 | 8 | 2 | 17 | 0 |
+| W3 | 34 | 32 | 0 | 2 | 0 |
+| Continuous | 10 | 10 | 0 | 0 | 0 |
+| **Total** | **90** | **51** | **6** | **33** | **0** |
+
+Three more W2 tickets closed ahead of the 2026-08-05 SLA. With this batch the W2 surface narrows to 8 pending — all blocked by counsel / consultant / conditional / large-effort / time-gated. Doctrine **R-7** sign-off recorded inline in § 11 ledger; not a wave drift.
+
+**W2 Verified added in batch E (3):** R-NPM-PROVENANCE-001 (`npm audit signatures` in CI security job — supply-chain hardening), R-CI-PIN-001 (37 GitHub Actions uses-references SHA-pinned + `dependabot.yml` keeping them current — supply-chain hardening), R-RUNBOOK-DR-001 (HANDOFF § 8.11 DR runbook for region failover — H-22 doctrine dependency).
+
+**W2 still Pending (8) — block reason:**
+
+| Ticket | Block reason |
+|---|---|
+| R-NIS2-SCOPE-001 | Counsel — D.Lgs. 138/2024 scope determination |
+| R-CRA-001 | Counsel — Reg. UE 2024/2847 applicability + OSS Stewardship Art. 24 |
+| R-A11Y-AUDIT-001 | External a11y consultant (axe-core CI + manual NVDA / VoiceOver / 200% / 400% zoom) |
+| R-LEGAL-SLA-ALIGN-001 | Counsel — contractual SLA vs engineering SLO drafting |
+| R-AUDIT-ASYNC-001 | Conditional — only if a customer contractually requires guaranteed audit log |
+| R-PGBOUNCER-001 | L effort — dedicated batch candidate (PgBouncer container + k8s deployment + load test) |
+| R-DR-DRILL-001 | First-drill exercise required (uses § 8.11 runbook end-to-end against staging) |
+| R-OWNER-001 | Time-gated — depends on hire #2 onboarding |
+
+The remaining R-FRONTEND-BEARER-RETIRE-001 follow-on is time-gated separately (post-W1 dual-mode cohabitation cycle) and not yet a `### R-` heading in § 6.
+
+Backend ESLint clean (unchanged from v1.0.5 — batch E touches CI / docs only). Frontend ESLint + tsc clean (unchanged). Backend Jest 340 / 340 (unchanged). New files: `.github/dependabot.yml`. Modified: `.github/workflows/{ci,cd,docs-lint}.yml`, `docs/HANDOFF.md`.
 
 ---
 
