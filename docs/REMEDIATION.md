@@ -460,11 +460,11 @@ Each ticket below uses the canonical schema:
   - `backend/src/routes/contact.js` invokes nodemailer with `text: <plain-text-body>` (preferred) or with `html: escapeHtml(...)`.
   - Joi schema rejects HTML-tag patterns in `message` field (defence in depth).
   - Test that submits `<script>alert(1)</script>` and confirms the rendered email shows the literal string.
-- **Regression test:** `backend/tests/contact-form.test.js` adds the XSS-payload scenario.
+- **Regression test:** `backend/tests/contact-html-injection.test.js` (3 cases) asserts no `html:` field passed to nodemailer at any sendMail call site, every sendMail includes a `text:` body, and the honeypot short-circuit precedes the SMTP send.
 - **Blast radius:** Contact-form email path only.
 - **Rollback plan:** revert.
 - **Effort:** S.
-- **Status:** Pending.
+- **Status:** Verified (2026-05-07) — `backend/src/routes/contact.js` already uses `text:`-only; the audit's gap was a missing regression-lock, now in place.  No code change required beyond the lock; if a future refactor adds an HTML body, the regression test will fail and force the contributor to add an explicit escaping step.
 
 ### R-GDPR-001 — Ship GDPR subject-rights API + scripts.
 
@@ -1688,7 +1688,7 @@ This section is the canonical status board. Updated by the verifier upon each ti
 | R-CI-AUDIT-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/ci-security-gates.test.js — 5 cases asserting no `\|\| true` masking + Trivy HIGH/CRITICAL exit-1 |
 | R-FRONTEND-COOKIE-AUTH-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-AUTH-001 | W1 | Pending | TBD | TBD | — |
-| R-CONTACT-ESCAPE-001 | W1 | Pending | TBD | TBD | — |
+| R-CONTACT-ESCAPE-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/contact-html-injection.test.js — asserts no `html:` field on nodemailer + text-only body + honeypot-before-sendMail |
 | R-GDPR-001 | W1 | Pending | TBD | TBD | — |
 | R-FRONTEND-DOCKERFILE-USER-001 | W1 | Verified | 2026-05-07 | 2026-05-07 | backend/tests/frontend-dockerfile.test.js — USER non-root assertion |
 | R-K8S-DIGEST-001 | W1 | Pending | TBD | TBD | — |
