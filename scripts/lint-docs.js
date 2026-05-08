@@ -46,10 +46,11 @@ const ANCHOR_ALLOWLIST = new Set([
   'AUDIT.md#a-finding-f-med-001',
   // F-XXX placeholder appears in a forward-looking discussion of
   // future findings; not a real reference.
-  'AUDIT.md#a-finding-f-xxx',
-  // R-TOS-BREACH-001 referenced from a draft ticket placeholder; the
-  // ticket spec is in R-DPA-FILL-001 group, not yet split out.
-  'REMEDIATION.md#r-ticket-r-tos-breach-001'
+  'AUDIT.md#a-finding-f-xxx'
+  // R-TOS-BREACH-001 was previously allowlisted because the ticket was
+  // referenced from AUDIT but never filed in REMEDIATION. The ticket
+  // landed in REMEDIATION § 7 W3 during the 2026-05-08 audit reconciliation;
+  // the anchor now resolves naturally. Allowlist entry removed.
 ]);
 
 const errors = [];

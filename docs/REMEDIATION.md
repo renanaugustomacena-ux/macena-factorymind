@@ -1314,6 +1314,19 @@ Each ticket below uses the canonical schema:
 - **Background:** PR #1 (W2/W3 sweep, 2026-05-08) discovered Trivy was failing on AWS-0079. The clusters at v1.0 do not enable `execute_command` (no task definitions carry `enable_execute_command = true`), so the encryption gap has no current data-at-rest exposure — but Tier 4 SaaS troubleshooting WILL want execute_command, and wiring the KMS reference proactively closes the gap before the ops need surfaces. Allowlisted in `.trivyignore` with this ticket ID as the unblock condition.
 - **Status:** Pending.
 
+### R-TOS-BREACH-001 — Add 24-h breach-notification timeline to ToS art. 7.
+
+- **Findings closed:** [F-HIGH-LEGAL-001](AUDIT.md#a-finding-f-high-legal-001).
+- **Wave:** W3.
+- **Owner:** Renan + counsel review.
+- **Severity gate:** High (regulatory clarity — GDPR Art. 33 expectation-management gap).
+- **Exit criteria:**
+  - `legal/TERMINI-DI-SERVIZIO.md` art. 7 (Garanzie e limitazione di responsabilità) summarises the 24-h breach-notification timeline that the DPA imposes — so a customer reading ToS alone (without DPA) is aware of the obligation.
+  - Cross-reference `legal/DPA.md` § N (notification clause) and `legal/PRIVACY-POLICY.md` § N (data-subject notification chain) so the three documents are consistent.
+- **Effort:** S.
+- **Background:** filed during the 2026-05-08 AUDIT.md reconciliation to close the long-standing allowlisted-anchor warning (`AUDIT.md → REMEDIATION.md#r-ticket-r-tos-breach-001`). Counsel review mandated because the timeline language must match the DPA verbatim.
+- **Status:** Pending.
+
 ### R-COVERAGE-UPLIFT-001 — Ratchet backend Jest coverage thresholds back to 60% / 60% / 60% / 60%.
 
 - **Findings closed:** doctrine **R-3** (no `|| true` masking — coverage gate must be honest).
@@ -1823,6 +1836,11 @@ Updated quarterly (HANDOFF doctrine **H-22**).
 | F-LOW-OBSERVABILITY-001 | R-OTEL-SAMPLING-DOC-001 |
 | F-LOW-CD-001 | (strength, no ticket) |
 | F-LOW-CD-002 | R-CHANGELOG-AUTO-001 |
+| F-HIGH-LEGAL-001 | R-TOS-BREACH-001 |
+| F-MED-LEGAL-007 | (no ticket — informational; AUDIT entry self-resolves "no remediation needed") |
+| F-LOW-DEPS-001 | (no ticket — informational; backend uses `ws`, not `socket.io`; frontend portion closed via R-FRONTEND-DEPS-CLEANUP-001) |
+| F-LOW-CONFIG-001 | (no ticket — accepted residual; install.sh overrides `.env.example` placeholders during bootstrap per H-1) |
+| F-LOW-CONFIG-002 | (deferred to continuous — quarterly KMS rotation review per A-12; HANDOFF § 7.5 update follow-up) |
 
 ---
 
@@ -2105,6 +2123,35 @@ PR #1 surfaced two pre-existing CI breakages on `main` and one new gate that nee
 **New ticket (1):** R-COVERAGE-UPLIFT-001 (W3, L effort) — documents the honest gap and the ratchet plan.
 
 **Updated totals.** W3 total moves 34 → 35 (added new ticket), pending 23 → 24. Total tickets 90 → 91, pending 42 → 43, verified 42 unchanged.
+
+### v1.0.11 — AUDIT.md reconciliation snapshot (2026-05-08)
+
+| Wave | Total | Pending | In Progress | Verified |
+|---|---|---|---|---|
+| W0 | 0 | 0 | 0 | 0 |
+| W1 | 19 | 1 | 4 | 14 |
+| W2 | 27 | 8 | 2 | 17 |
+| W3 | 36 | 25 | 0 | 11 |
+| Continuous | 10 | 10 | 0 | 0 |
+| **Total** | **92** | **44** | **6** | **42** |
+
+Post-merge audit pass against AUDIT.md surfaced one missing-ticket gap that had been generating an allowlisted-anchor warning in docs-lint for months: F-HIGH-LEGAL-001 referenced `R-TOS-BREACH-001` in its remediation pointer, but the ticket was never filed. Filed it now (W3, S effort, counsel review mandated). AUDIT.md gains a § 1.4 reconciliation history sub-section documenting the v1.0.0 baseline and the v1.0.10 post-W2/W3-sweep closure state — see [`AUDIT.md`](AUDIT.md#14-reconciliation-history).
+
+**W3 Pending added (1):** R-TOS-BREACH-001 (24-h breach-notification timeline in ToS art. 7).
+
+**REMEDIATION § Appendix A** filled five previously-missing finding-to-ticket mappings:
+
+| Finding | Mapping | Rationale |
+|---|---|---|
+| F-HIGH-LEGAL-001 | R-TOS-BREACH-001 | New ticket; resolves the AUDIT → REMEDIATION allowlisted-anchor warning |
+| F-MED-LEGAL-007 | (no ticket — informational) | AUDIT entry self-resolves "no remediation needed for this specific point" |
+| F-LOW-DEPS-001 | (no ticket — informational) | Backend uses `ws`, not socket.io; frontend portion closed via R-FRONTEND-DEPS-CLEANUP-001 |
+| F-LOW-CONFIG-001 | (no ticket — accepted residual) | install.sh overrides `.env.example` placeholders during bootstrap per H-1 |
+| F-LOW-CONFIG-002 | (deferred to continuous) | Quarterly KMS rotation review per A-12; HANDOFF § 7.5 update follow-up |
+
+The four remaining allowlisted-anchor warnings in `scripts/lint-docs.js` correspond to a separate category-naming drift between AUDIT.md (`F-MED-DATA-XXX`, `F-MED-CODE-XXX`, `F-MED-LEGAL-XXX`) and REMEDIATION § Appendix A (`F-MED-XXX` without category). Tracked under R-AUDIT-MED-IDS-001 (TBD) as a follow-up cleanup; not in scope for this reconciliation pass.
+
+Engineering side: backend Jest 340/340, all linters clean, all CI green post-PR-#1-merge. External-side W1 deadline 2026-06-06 (29 days out at this snapshot) gates on AWS apply + counsel sign-off + first CD run.
 
 ---
 
