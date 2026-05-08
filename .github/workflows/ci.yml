@@ -149,14 +149,23 @@ jobs:
       # R-NPM-PROVENANCE-001 (supply-chain hardening). `npm audit signatures`
       # verifies that every published package in the lockfile has a valid
       # ECDSA signature recorded in the npm Sigstore log; fails on missing or
-      # tampered signatures. Re-run after every dependency change. The flag
-      # `--workspaces=false --include=dev` keeps the check scoped to the
-      # current package-lock and includes devDependencies (which are part of
-      # the trusted build chain). Allow-listing for unsigned packages would
-      # go via project-level npm config (`signature-overrides`); none today.
+      # tampered signatures. The check requires installed packages on disk
+      # (npm error message: "found no dependencies to audit that were
+      # installed from a supported registry") — so we `npm ci` first. The
+      # `--ignore-scripts` flag on the install prevents lifecycle-script
+      # execution during the security gate (we only need the lockfile-shaped
+      # node_modules tree, not a working build).
+      - name: Install backend deps (signature-audit only)
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
       - name: npm audit signatures (backend)
         working-directory: backend
         run: npm audit signatures --workspaces=false --include=dev
+
+      - name: Install frontend deps (signature-audit only)
+        working-directory: frontend
+        run: npm ci --ignore-scripts
 
       - name: npm audit signatures (frontend)
         working-directory: frontend
