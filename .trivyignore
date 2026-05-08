@@ -19,6 +19,18 @@
 AWS-0164
 
 # -----------------------------------------------------------------------------
+# KSV-0109 — ConfigMap stores secrets in key(s) or value(s).
+# -----------------------------------------------------------------------------
+# False positive: the rule fires because the substring "PASSWORD" appears in
+# `PASSWORD_MIN_LENGTH` inside `factorymind-config` ConfigMap (the password-
+# policy minimum-character integer, e.g. 12 — set by the auth-policy
+# pipeline). The actual password material (admin bootstrap hash, MQTT broker
+# password, etc.) lives in `factorymind-secrets` (Secret resource), not in
+# this ConfigMap. The over-eager substring match doesn't distinguish
+# "policy-around-passwords" from "actual-password-material".
+KSV-0109
+
+# -----------------------------------------------------------------------------
 # AWS-0079 — Cluster does not specify a customer managed key for storage
 # encryption.
 # -----------------------------------------------------------------------------
