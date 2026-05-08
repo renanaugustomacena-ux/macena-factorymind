@@ -7,7 +7,7 @@
 # Default target is `dev` to preserve HMR for local `docker compose up`.
 # ============================================================================
 
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -20,7 +20,7 @@ RUN if [ -f package-lock.json ]; then \
 COPY . .
 
 # ----- dev: runs `npm run dev` for HMR during docker-compose development -----
-FROM node:24-alpine AS dev
+FROM node:26-alpine AS dev
 WORKDIR /app
 ENV NODE_ENV=development
 COPY --from=builder /app /app
