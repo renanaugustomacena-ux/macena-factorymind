@@ -6,7 +6,7 @@
 #   - runtime: minimal distroless-like node:20-alpine, non-root, HEALTHCHECK
 # ============================================================================
 
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -26,7 +26,7 @@ COPY src ./src
 COPY tests ./tests
 
 # ---------------------------------------------------------------------- runtime
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 LABEL org.opencontainers.image.title="factorymind-backend"
 LABEL org.opencontainers.image.description="Industrial IoT monitoring backend for Italian manufacturing SMEs"
