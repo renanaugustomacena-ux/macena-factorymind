@@ -131,7 +131,14 @@ jobs:
     name: Security · audit + Trivy + gitleaks
     runs-on: ubuntu-latest
     steps:
+      # Gitleaks needs full git history to compute the diff range from the
+      # merge-base; the default fetch-depth=1 produces "unknown revision"
+      # errors for any commit older than the most recent. fetch-depth=0
+      # = full clone. Trivy + npm audit don't need history but the cost
+      # of full clone here is < 5s on a repo this size.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: "20" }
 
