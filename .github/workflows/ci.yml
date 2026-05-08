@@ -23,8 +23,8 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -38,15 +38,15 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci || npm install
       - run: npm run test:cov
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: backend-coverage
@@ -57,9 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-lint, backend-test]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./backend
           push: false
@@ -78,8 +78,8 @@ jobs:
     defaults:
       run: { working-directory: frontend }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -95,15 +95,15 @@ jobs:
     defaults:
       run: { working-directory: frontend }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci || npm install
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: frontend-dist
           path: frontend/dist
@@ -117,8 +117,8 @@ jobs:
     defaults:
       run: { working-directory: iot-simulator }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install --no-audit --no-fund
@@ -131,8 +131,15 @@ jobs:
     name: Security · audit + Trivy + gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Gitleaks needs full git history to compute the diff range from the
+      # merge-base; the default fetch-depth=1 produces "unknown revision"
+      # errors for any commit older than the most recent. fetch-depth=0
+      # = full clone. Trivy + npm audit don't need history but the cost
+      # of full clone here is < 5s on a repo this size.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: "20" }
 
       # R-CI-AUDIT-001 (F-CRIT-007): security gates are blocking — no
@@ -146,16 +153,66 @@ jobs:
         working-directory: frontend
         run: npm audit --production --audit-level=high
 
+      # R-NPM-PROVENANCE-001 (supply-chain hardening). `npm audit signatures`
+      # verifies that every published package in the lockfile has a valid
+      # ECDSA signature recorded in the npm Sigstore log; fails on missing or
+      # tampered signatures. The check requires installed packages on disk
+      # (npm error message: "found no dependencies to audit that were
+      # installed from a supported registry") — so we `npm ci` first. The
+      # `--ignore-scripts` flag on the install prevents lifecycle-script
+      # execution during the security gate (we only need the lockfile-shaped
+      # node_modules tree, not a working build).
+      - name: Install backend deps (signature-audit only)
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
+      - name: npm audit signatures (backend)
+        working-directory: backend
+        run: npm audit signatures --workspaces=false --include=dev
+
+      - name: Install frontend deps (signature-audit only)
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+
+      - name: npm audit signatures (frontend)
+        working-directory: frontend
+        run: npm audit signatures --workspaces=false --include=dev
+
+      # R-MIGR-LINT-001 — H-14 (migrations forward-only) enforcement.
+      # Forbid DROP / TRUNCATE in committed migrations. The exception
+      # documented in HANDOFF Appendix A (rollback of a v1.x feature
+      # via a new explicit-DROP migration) is allow-listed by the
+      # commit author marking the file with an inline comment of the
+      # form `-- ALLOW-DROP: <reason>`. Otherwise: fail-closed.
+      - name: Forbid DROP/TRUNCATE in migrations (R-MIGR-LINT-001)
+        run: |
+          set -euo pipefail
+          if grep -E '^DROP\b|^TRUNCATE\b' backend/src/db/migrations/*.sql 2>/dev/null; then
+            # Re-check excluding files that explicitly allow it.
+            offenders=$(grep -lE '^DROP\b|^TRUNCATE\b' backend/src/db/migrations/*.sql)
+            for f in $offenders; do
+              if ! grep -q '^-- ALLOW-DROP:' "$f"; then
+                echo "::error file=$f::Forbidden DROP/TRUNCATE without '-- ALLOW-DROP: <reason>' marker (doctrine H-14)" >&2
+                exit 1
+              fi
+            done
+          fi
+          echo "Migrations lint clean — no forbidden DROP/TRUNCATE without ALLOW-DROP marker."
+
       - name: Trivy config scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           scan-type: config
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
           exit-code: "1"
+          # Per-rule allowlist with mandatory rationale lives at .trivyignore
+          # at the repo root. Doctrine R-3: each entry must justify why the
+          # finding is FP / tracked under a follow-up ticket.
+          trivyignores: ".trivyignore"
 
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -168,8 +225,8 @@ jobs:
     defaults:
       run: { working-directory: terraform }
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with: { terraform_version: "1.9.8" }
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false

@@ -108,3 +108,8 @@ tmp/
 temp/
 *.tmp
 *.bak
+
+# ---- Private (founder-personal artefacts; NEVER committed) ----
+# Fiscal cadences, customer pipeline, weekly retros, sustainability rhythm.
+# Public counterpart is docs/OPERATING-CALENDAR.md.
+private/

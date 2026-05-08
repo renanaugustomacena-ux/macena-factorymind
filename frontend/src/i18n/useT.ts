@@ -13,7 +13,7 @@
  * superano i 30 KB gzipped, mentre questo hook aggiunge meno di 1 KB).
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { DEFAULT_LOCALE, resolveLocale, t as rawT, type Locale } from '@/locales';
 
 export interface TranslateFn {
@@ -41,6 +41,12 @@ export function useT(preferredLocale?: Locale | string): TranslateFn {
     }
     return DEFAULT_LOCALE;
   }, [preferredLocale]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.documentElement.lang !== active) {
+      document.documentElement.lang = active;
+    }
+  }, [active]);
 
   const fn = useCallback<TranslateFn>(
     ((key: string, vars?: Record<string, string | number>) => {

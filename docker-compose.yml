@@ -62,6 +62,11 @@ services:
     image: influxdb:2.7-alpine
     container_name: factorymind-influxdb
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to the image's intended non-root
+    # `influxdb` user (UID 1000 in 2.7-alpine). Override on `docker run`
+    # is rejected since we depend on the entrypoint creating /var/lib/
+    # influxdb2 with this ownership.
+    user: influxdb
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ${DOCKER_INFLUXDB_INIT_USERNAME:-admin}
@@ -91,6 +96,10 @@ services:
     image: eclipse-mosquitto:2
     container_name: factorymind-mosquitto
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to the image's `mosquitto` user
+    # (UID 1883). The volumes (/mosquitto/data + /mosquitto/log) are
+    # initialised with this ownership by the image's entrypoint.
+    user: mosquitto
     # R-MQTT-ANON-001: broker requires authentication. install.sh seeds
     # ./mosquitto/config/passwd with the MQTT_USERNAME/MQTT_PASSWORD pair.
     environment:
@@ -126,6 +135,12 @@ services:
       target: runtime
     container_name: factorymind-backend
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to the Dockerfile's `factorymind`
+    # user (defined at backend/Dockerfile:54). The image already runs
+    # as that user; the explicit pin documents the contract for the
+    # operator and prevents accidental override via `docker compose run
+    # --user root`.
+    user: factorymind
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-3002}
@@ -177,6 +192,11 @@ services:
       dockerfile: Dockerfile
     container_name: factorymind-frontend
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to the `nginx` user from the
+    # frontend Dockerfile (R-FRONTEND-DOCKERFILE-USER-001 closure;
+    # frontend/Dockerfile:68). Nginx reads on 5173 from within
+    # nginx:alpine's UID 101.
+    user: nginx
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3002}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
@@ -204,11 +224,23 @@ services:
     image: grafana/grafana-oss:latest
     container_name: factorymind-grafana
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to grafana-oss's `grafana` user
+    # (UID 472). The named `grafana-data` volume's ownership is
+    # initialised by the image entrypoint with this UID.
+    user: grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me_grafana_admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-piechart-panel"
+      # R-INFRA-GRAFANA-PLUGINS-001: pin to specific versions so a
+      # plugin-side regression can't reach prod silently. Versions
+      # resolved via the Grafana plugins catalog API on 2026-05-07.
+      # Note: grafana-piechart-panel is upstream-deprecated — Grafana
+      # now ships a built-in Pie chart. Remove this plugin in a
+      # follow-up sweep after migrating affected dashboards to the
+      # built-in panel; pinned to 1.6.4 in the meantime to freeze the
+      # exact bytes the dashboards were tested against.
+      GF_INSTALL_PLUGINS: "grafana-clock-panel:3.2.2,grafana-piechart-panel:1.6.4"
       GF_SERVER_ROOT_URL: ${GRAFANA_URL:-http://localhost:3000}
       GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
       INFLUX_TOKEN: ${INFLUX_TOKEN:-please-generate-long-random-token-and-set-here}
@@ -245,6 +277,11 @@ services:
       dockerfile: Dockerfile
     container_name: factorymind-simulator
     restart: unless-stopped
+    # R-INFRA-USER-EXPLICIT-001: pin to the `node` user from the
+    # iot-simulator Dockerfile (iot-simulator/Dockerfile:15). The
+    # node:lts-alpine base image carries the `node` user out of the
+    # box; the simulator owns no persistent state inside the container.
+    user: node
     environment:
       MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://factorymind-mosquitto:1883}
       MQTT_USERNAME: ${MQTT_USERNAME:-}

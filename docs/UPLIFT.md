@@ -158,7 +158,7 @@ GreenMetrics integration silently rotting is a Piano 5.0 attestation outage. § 
 
 **Why.** The Macena product constellation is interdependent; a unilateral polish on one side that breaks the other side is worse than no polish.
 
-**How to apply.** Cross-product initiatives carry an explicit "joint-with: <project>" tag; both sides ship in coordinated PRs.
+**How to apply.** Cross-product initiatives carry an explicit "joint-with: `<project>`" tag; both sides ship in coordinated PRs.
 
 **Cross-refs.** HANDOFF § 10.
 
@@ -1607,9 +1607,9 @@ This is a future-state worked example; the actual 2027-Q4 review will look diffe
 
 ### H.1 30-day check-in — bilingual script
 
-**(IT)** "Buongiorno <Nome>. Sono <Customer-Success Engineer> di FactoryMind. La chiamo per il check-in di 30 giorni — è un momento standard del nostro accompagnamento."
+**(IT)** "Buongiorno `<Nome>`. Sono `<Customer-Success Engineer>` di FactoryMind. La chiamo per il check-in di 30 giorni — è un momento standard del nostro accompagnamento."
 
-**(EN)** "Good morning <Name>. I'm <Customer-Success Engineer> from FactoryMind. I'm calling for the 30-day check-in — it's a standard part of how we accompany you."
+**(EN)** "Good morning `<Name>`. I'm `<Customer-Success Engineer>` from FactoryMind. I'm calling for the 30-day check-in — it's a standard part of how we accompany you."
 
 Then proceed with the questions in Appendix C. Note-taking is in English (for internal consistency); customer-shared summary is in Italian.
 
@@ -2305,6 +2305,7 @@ The Uplift Plan v1.0 baseline is the founder-self-authored, peer-reviewed-pendin
 The plan is **versioned and signed**. Revisions follow a formal process.
 
 **Quarterly revisions** (default; HANDOFF doctrine **H-22**):
+
 - Update Status fields in initiative ledgers.
 - Add new initiatives discovered.
 - Move initiatives between waves with sign-off.
@@ -2316,12 +2317,14 @@ The plan is **versioned and signed**. Revisions follow a formal process.
 - Update sign-off line.
 
 **Major revisions (v2.0, v3.0)**:
+
 - Annual; aligned with the broader product strategy refresh.
 - Restructure tracks if needed.
 - Refresh the five-year horizon.
 - Refresh the doctrine list (rule changes via ADR).
 
 **Minor revisions (v1.x)**:
+
 - As needed within the year.
 - Bug fixes, clarifications, citation refreshes.
 
@@ -2348,17 +2351,20 @@ A concrete trace of how an initiative moves through its life. Demonstrates the d
 **Initiative:** u-com-attestazione-pdf-polish
 
 **Phase 1 — Pending (Q2 2026 quarterly review)**
+
 - Reviewer notices that the attestazione PDF format is functional but visually unrefined.
 - Initiative added to UPLIFT § 6 Track Commercial.
 - Effort estimated L; wave Q3 2026.
 
 **Phase 2 — In Progress (Q3 2026 sprint planning, Day 1)**
+
 - Sprint planning meeting selects this initiative as the Q3 2026 commercial-track headline.
 - Owner: Renan + freelance designer.
 - Dependencies: R-ATTESTAZIONE-IDEMPOTENCY-001 closed; first Tier 2 customer signed (gates the customer-feedback path).
 - Spec written per § 8 template.
 
 **Phase 3 — Implementation (Days 1–14)**
+
 - Designer produces three layout concepts.
 - Renan picks one based on commercialista feedback.
 - Implementation in `backend/src/services/piano4-attestazione.js`; PDF rendering via pdfkit (or puppeteer migration if chosen).
@@ -2366,19 +2372,23 @@ A concrete trace of how an initiative moves through its life. Demonstrates the d
 - New test: visual regression test (image comparison) against the chosen layout.
 
 **Phase 4 — Verification (Days 14–18)**
+
 - First customer's commercialista reviews the new format.
 - Acceptance: written email confirming format is sufficient for Circolare 9/E/2018 attestation.
 - Sign-off: Renan + commercialista.
 
 **Phase 5 — Verified (Day 18)**
+
 - Status updated.
 - Initiative archived in § 8 spec ledger; success metric met.
 
 **Phase 6 — Quarterly review (Q3 2026 close, Day 90)**
+
 - Closure noted in quarterly review minutes.
 - Any follow-on work (e.g., u-com-attestazione-pdf-sign as a separate initiative) is scheduled for Q4 2026.
 
 **Phase 7 — Long-term observation (continuous)**
+
 - Subsequent customers' commercialisti also accept the format → success.
 - Customer's auditor (Agenzia delle Entrate) accepts the format → load-bearing validation.
 - One year later (Q3 2027 quarterly review), the v1 format is still serving; no rework needed.
@@ -2404,6 +2414,7 @@ The plan's signing line is provisional at v1.0 baseline. The peer-reviewer signa
 For convenience, the cross-document citations made in this UPLIFT plan, indexed for navigation.
 
 **To HANDOFF.md:**
+
 - Doctrine **H-1** (15-min bootstrap): § 6.1 (u-dx-bootstrap-time), Appendix E.1.
 - Doctrine **H-3** (Italian for legal, English for engineering): § 0 conventions.
 - Doctrine **H-5** (bus factor ≥ 2): § 11 (5-year horizon).
@@ -2419,6 +2430,7 @@ For convenience, the cross-document citations made in this UPLIFT plan, indexed 
 - § 11 (Glossary): expanded in Appendix T here.
 
 **To AUDIT.md:**
+
 - § 11 (Strengths): rule **R-15** + § 5 Abstraction Ledger preservations.
 - § 12 (Accepted residuals): rule **U-3** anti-goal alignment.
 - § 9 (CVE register): § 6.3 Track Security continuous tickets.
@@ -2426,6 +2438,7 @@ For convenience, the cross-document citations made in this UPLIFT plan, indexed 
 - Doctrine **A-12** (CVE quarterly): § 8 Continuous track.
 
 **To REMEDIATION.md:**
+
 - W1/W2/W3 closures as preconditions for many UPLIFT initiatives.
 - Rule **R-7** (wave drift): rule **U-3** + **U-7** (track coordination).
 - Rule **R-15** (do-no-harm): rule **U-1** (guard test).

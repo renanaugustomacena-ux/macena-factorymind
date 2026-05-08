@@ -3,6 +3,14 @@ import { api } from '@/api/client';
 import { ShiftReport } from '@/components/ShiftReport';
 import { DowntimeChart } from '@/components/DowntimeChart';
 import { useT } from '@/i18n/useT';
+import type { OEEResult } from '@/types';
+
+const FALLBACK_OEE: OEEResult = {
+  availability: 0, performance: 0, quality: 0, oee: 0,
+  operating_time_sec: 0, planned_time_sec: 0, downtime_sec: 0,
+  total_count: 0, good_count: 0, reject_count: 0,
+  cycle_time_actual_sec: 0, classification: 'insufficient-data'
+};
 
 export function Reports() {
   const facility = import.meta.env.VITE_DEFAULT_FACILITY || 'mozzecane';
@@ -35,12 +43,7 @@ export function Reports() {
           shiftName={t('reports.shift_current')}
           startAt={start.toISOString()}
           endAt={now.toISOString()}
-          oee={(oeeQuery.data?.aggregate as any) || {
-            availability: 0, performance: 0, quality: 0, oee: 0,
-            operating_time_sec: 0, planned_time_sec: 0, downtime_sec: 0,
-            total_count: 0, good_count: 0, reject_count: 0,
-            cycle_time_actual_sec: 0, classification: 'insufficient-data'
-          }}
+          oee={oeeQuery.data?.aggregate || FALLBACK_OEE}
         />
 
         <section aria-busy={downtimesQuery.isLoading}>

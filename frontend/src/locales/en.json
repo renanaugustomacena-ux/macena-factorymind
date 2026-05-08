@@ -1,9 +1,16 @@
 {
   "app": {
     "title": "FactoryMind",
-    "tagline": "Monitor Your Production in Real Time",
+    "tagline": "Real-time production monitoring",
     "loading": "Loading...",
-    "error": "An error occurred"
+    "error": "An unexpected error occurred",
+    "error_boundary": {
+      "heading": "The page cannot be displayed",
+      "body": "Production data is safe. You can retry or reload the browser.",
+      "retry": "Retry",
+      "reload": "Reload page"
+    },
+    "version": "Version"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -15,16 +22,23 @@
     "logout": "Log out"
   },
   "dashboard": {
-    "title": "Plant Overview",
+    "title": "Production overview",
+    "subtitle_facility": "Plant {{facility}}",
+    "subtitle_machines": "{{count}} machines connected",
     "oee": {
       "label": "OEE (Overall Equipment Effectiveness)",
       "availability": "Availability",
+      "availability_hint": "Operating time vs planned time",
       "performance": "Performance",
+      "performance_hint": "Actual cycle time vs nominal",
       "quality": "Quality",
+      "quality_hint": "Good parts as a share of total produced",
       "world_class": "World-class (>= 85%)",
-      "above_target": "Above target",
+      "above_average": "Above the industry average",
+      "average": "On par with the industry",
       "below_target": "Below target",
-      "insufficient_data": "Insufficient data"
+      "zero_production": "No production in the period",
+      "insufficient_data": "Insufficient data to compute OEE"
     },
     "production": {
       "good": "Good parts",
@@ -33,16 +47,21 @@
       "cycle_time": "Mean cycle time (s)",
       "shift": "Shift",
       "target": "Target"
-    }
+    },
+    "machines_heading": "Machine status",
+    "alerts_heading": "Open alerts"
   },
   "machines": {
-    "title": "Machine Configuration",
+    "title": "Machine configuration",
+    "subtitle": "Master data and process parameters for the plant's machines.",
     "table": {
       "name": "Name",
       "vendor": "Vendor",
       "model": "Model",
       "protocol": "Protocol",
       "status": "Status",
+      "cycle_time_ideal": "Ideal cycle time (s)",
+      "ideal_output": "Nominal hourly output",
       "actions": "Actions"
     },
     "status": {
@@ -54,11 +73,15 @@
     "actions": {
       "edit": "Edit",
       "delete": "Delete",
-      "attestazione_piano4": "Generate Piano 4.0 attestation"
-    }
+      "attestazione_piano4": "Generate Piano 4.0/5.0 attestation",
+      "details": "Machine details"
+    },
+    "last_update": "Last update",
+    "empty": "No machines registered. Contact support."
   },
   "alerts": {
-    "title": "Active Alerts",
+    "title": "Active alerts",
+    "subtitle": "Critical events detected by the system that require operator review.",
     "severity": {
       "warning": "Warning",
       "major": "Major",
@@ -71,18 +94,26 @@
     },
     "actions": {
       "acknowledge": "Acknowledge",
-      "resolve": "Resolve"
+      "resolve": "Mark as resolved"
     },
-    "empty": "No active alerts"
+    "empty": "No active alerts. Production normal."
   },
   "reports": {
-    "title": "Production Reports",
+    "title": "Reports and attestations",
+    "subtitle": "Shift reports, OEE trends and downtime Pareto analysis. Also exportable as a Piano 4.0/5.0 attestation for the accountant.",
+    "shift_current": "Current shift",
+    "downtime_chart": {
+      "heading": "Machine downtime Pareto",
+      "loading": "Loading data...",
+      "error": "Downtime data is currently unavailable.",
+      "window_note": "Window: last 24 hours. Total downtime: {{minutes}} min across {{events}} events."
+    },
     "period": {
       "today": "Today",
-      "week": "Week",
-      "month": "Month",
-      "quarter": "Quarter",
-      "custom": "Custom"
+      "week": "This week",
+      "month": "This month",
+      "quarter": "This quarter",
+      "custom": "Custom range"
     },
     "export": "Export",
     "export_formats": {
@@ -93,20 +124,27 @@
   },
   "auth": {
     "login": {
-      "title": "Sign in",
-      "email": "Email address",
+      "title": "Sign in to the dashboard",
+      "email": "Business email address",
       "password": "Password",
       "submit": "Sign in",
-      "forgot": "Forgot password?",
+      "forgot": "Forgot your password?",
       "invalid_credentials": "Invalid credentials",
-      "account_locked": "Account temporarily locked. Try again later.",
-      "too_many_attempts": "Too many attempts. Please wait and retry."
+      "account_locked": "Access suspended after too many attempts. Try again in a few minutes.",
+      "too_many_attempts": "Too many recent attempts. Please wait and retry."
     },
     "password_policy": {
-      "min_length": "Password must be at least 12 characters",
-      "breached": "This password appears in known breach corpora. Choose a different password.",
-      "weak": "Password too weak"
+      "min_length": "Password must be at least 12 characters.",
+      "breached": "This password appears in known breach corpora. Choose another.",
+      "weak": "Password is not strong enough.",
+      "hibp_unavailable": "Password verification service is unavailable. Please retry shortly."
     }
+  },
+  "connection": {
+    "mqtt_connected": "MQTT channel active",
+    "mqtt_disconnected": "MQTT channel interrupted. Reconnecting...",
+    "api_unreachable": "Backend unreachable. Check the corporate network.",
+    "connecting": "Connecting..."
   },
   "common": {
     "save": "Save",
@@ -116,11 +154,21 @@
     "no": "No",
     "refresh": "Refresh",
     "search": "Search",
-    "filter": "Filter"
+    "filter": "Filter",
+    "edit": "Edit",
+    "delete": "Delete",
+    "download": "Download",
+    "back": "Back",
+    "next": "Next"
   },
-  "connection": {
-    "mqtt_connected": "MQTT connected",
-    "mqtt_disconnected": "MQTT disconnected — attempting to reconnect",
-    "api_unreachable": "Backend unreachable"
+  "attestazione": {
+    "title": "Piano 4.0/5.0 attestation",
+    "generate": "Generate attestation PDF",
+    "preview": "Preview data",
+    "verify": "Verify attestation",
+    "revoke": "Revoke attestation",
+    "eligible": "Machine eligible for the tax credit",
+    "not_eligible": "Machine not eligible: requirements not met",
+    "disclaimer": "Technical document. Tax responsibility remains with the business owner and their accountant."
   }
 }

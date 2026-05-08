@@ -1,0 +1,88 @@
+# R-CI-PIN-001 — keep SHA-pinned GitHub Actions current.
+#
+# Every `uses:` in `.github/workflows/*.yml` is pinned to a 40-char
+# commit SHA (with a trailing `# vX.Y.Z` comment for human readability).
+# Dependabot's `github-actions` ecosystem updater opens a PR when a new
+# release is published, refreshing the SHA and the comment in lockstep
+# so the security property of immutable references stays intact.
+#
+# We also subscribe the `npm` ecosystem here for backend / frontend /
+# iot-simulator so dep upgrades land alongside lockfile + audit checks.
+# `versioning-strategy: increase-if-necessary` keeps semver-respecting
+# range bumps to a minimum.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    labels: ["security", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+
+  - package-ecosystem: npm
+    directory: "/backend"
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "07:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "backend"]
+    versioning-strategy: increase-if-necessary
+    commit-message:
+      prefix: "chore(backend)"
+      include: scope
+
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "07:30"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "frontend"]
+    versioning-strategy: increase-if-necessary
+    commit-message:
+      prefix: "chore(frontend)"
+      include: scope
+
+  - package-ecosystem: npm
+    directory: "/iot-simulator"
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "08:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "simulator"]
+    commit-message:
+      prefix: "chore(simulator)"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: "/backend"
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "docker"]
+
+  - package-ecosystem: docker
+    directory: "/frontend"
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "docker"]
+
+  - package-ecosystem: terraform
+    directory: "/terraform"
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "07:00"
+      timezone: Europe/Rome
+    labels: ["dependencies", "terraform"]

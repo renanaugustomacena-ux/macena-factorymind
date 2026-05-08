@@ -1,11 +1,16 @@
 /**
- * Canonical MQTT topic builders and parsers for FactoryMind.
+ * Canonical MQTT topic builders, parsers, and validators for FactoryMind.
  *
- * Topic taxonomy:
- *   factory/{facility_id}/{line_id}/{machine_id}/telemetry
- *   factory/{facility_id}/{line_id}/{machine_id}/alarms
- *   factory/{facility_id}/{line_id}/{machine_id}/commands
- *   factory/{facility_id}/{line_id}/{machine_id}/status
+ * Topic taxonomy v2 (R-MQTT-TOPIC-VALIDATION-001):
+ *   factory/{facility_id}/{line_id}/{machine_id}/{kind}
+ *   kind ∈ telemetry | status | alarms | counters | commands
+ *
+ * Per-segment grammar: lower-case alphanumeric or hyphen, 1–32 chars.
+ * The 32-char ceiling is part of cardinality control — InfluxDB tag values
+ * become time-series identities, and unbounded segment lengths invite
+ * cardinality blow-ups (R-INFLUX-CARDINALITY-AUDIT-001 covers ongoing
+ * scrutiny). The lower-case constraint matches MQTT topic conventions and
+ * eliminates case-folding ambiguity across brokers.
  *
  * Payload standard (JSON):
  *   { ts: ISO-8601, metric: string, value: number, unit: string, quality: 0..100 }
@@ -19,8 +24,9 @@
  * where message_type ∈ {NBIRTH, NDEATH, NDATA, NCMD, DBIRTH, DDEATH, DDATA, DCMD, STATE}.
  * We map FactoryMind's facility→group, line+machine→edge_node+device; payloads
  * are encoded with the Eclipse Tahu protobuf schema (sparkplug-payload npm module).
- * A separate `sparkplug-bridge` worker can be added later to translate between
- * JSON topic hierarchy and Sparkplug protobuf in either direction.
+ * The `sparkplug-bridge` worker translates between the JSON topic hierarchy
+ * and Sparkplug protobuf. Validation here applies to the canonical
+ * `factory/...` hierarchy only; Sparkplug topics have their own grammar.
  */
 
 'use strict';
@@ -29,18 +35,27 @@ const TOPIC_ROOT = 'factory';
 
 const KINDS = Object.freeze({
   TELEMETRY: 'telemetry',
+  STATUS: 'status',
   ALARMS: 'alarms',
-  COMMANDS: 'commands',
-  STATUS: 'status'
+  COUNTERS: 'counters',
+  COMMANDS: 'commands'
 });
 
 const KIND_VALUES = new Set(Object.values(KINDS));
 
-const ID_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/i;
+// Per-segment regex (R-MQTT-TOPIC-VALIDATION-001).
+// Lower-case alphanumeric or hyphen, 1–32 chars, case-sensitive.
+const ID_REGEX = /^[a-z0-9-]{1,32}$/;
+
+// Canonical topic regex — verbatim from the R-MQTT-TOPIC-VALIDATION-001
+// spec. Use `validate(topic)` when checking topics received from external
+// systems (broker bridges, replay services, simulator).
+const CANONICAL_TOPIC_REGEX =
+  /^factory\/[a-z0-9-]{1,32}\/[a-z0-9-]{1,32}\/[a-z0-9-]{1,32}\/(telemetry|status|alarms|counters|commands)$/;
 
 function assertId(name, value) {
   if (typeof value !== 'string' || !ID_REGEX.test(value)) {
-    throw new Error(`invalid ${name}: "${value}" — must match /^[a-z0-9][a-z0-9-]{0,62}$/i`);
+    throw new Error(`invalid ${name}: "${value}" — must match /^[a-z0-9-]{1,32}$/`);
   }
 }
 
@@ -59,14 +74,18 @@ function build({ facility, line, machine, kind }) {
  * Returns null if the topic does not match the canonical pattern.
  */
 function parse(topic) {
-  if (typeof topic !== 'string') return null;
+  if (!validate(topic)) return null;
   const parts = topic.split('/');
-  if (parts.length !== 5) return null;
   const [root, facility, line, machine, kind] = parts;
-  if (root !== TOPIC_ROOT) return null;
-  if (!KIND_VALUES.has(kind)) return null;
-  if (!ID_REGEX.test(facility) || !ID_REGEX.test(line) || !ID_REGEX.test(machine)) return null;
   return { root, facility, line, machine, kind };
+}
+
+/**
+ * Validate a topic string against the canonical regex.
+ * Strict — does not accept wildcards. For wildcard matching use `matches`.
+ */
+function validate(topic) {
+  return typeof topic === 'string' && CANONICAL_TOPIC_REGEX.test(topic);
 }
 
 /**
@@ -102,8 +121,11 @@ module.exports = {
   TOPIC_ROOT,
   KINDS,
   KIND_VALUES: [...KIND_VALUES],
+  ID_REGEX,
+  CANONICAL_TOPIC_REGEX,
   build,
   parse,
+  validate,
   subscriptionTopic,
   matches,
   assertId

@@ -282,7 +282,7 @@ FactoryMind exists in a constellation of sister projects: `macena-greenmetrics` 
 
 ### Rule H-11 — Open-source distribution and SaaS distribution are separate licensing surfaces.
 
-The repository is licensed MIT (`LICENSE` file at root). The Tier 2 / 3 / 4 commercial distributions (cfr. § 1.5) are licensed under separate commercial agreements (`legal/CONTRATTO-SAAS-B2B.md` for Tier 2/3, `legal/TERMINI-DI-SERVIZIO.md` for Tier 4 SaaS). The two licensing surfaces have different obligations under the EU Cyber Resilience Act (Reg. UE 2024/2847): the MIT-distributed self-hosted version is a candidate for the Open Source Software Stewardship exemption (Art. 24); the commercial Tier 2/3/4 are "products with digital elements" placed on the EU market and therefore in full CRA scope from 11 December 2027 (with vulnerability handling reporting from 11 September 2026). 
+The repository is licensed MIT (`LICENSE` file at root). The Tier 2 / 3 / 4 commercial distributions (cfr. § 1.5) are licensed under separate commercial agreements (`legal/CONTRATTO-SAAS-B2B.md` for Tier 2/3, `legal/TERMINI-DI-SERVIZIO.md` for Tier 4 SaaS). The two licensing surfaces have different obligations under the EU Cyber Resilience Act (Reg. UE 2024/2847): the MIT-distributed self-hosted version is a candidate for the Open Source Software Stewardship exemption (Art. 24); the commercial Tier 2/3/4 are "products with digital elements" placed on the EU market and therefore in full CRA scope from 11 December 2027 (with vulnerability handling reporting from 11 September 2026).
 
 **Why.** Treating "FactoryMind" as a single legal entity in the documentation collapses two materially different regulatory postures. A customer's legal counsel will ask, "Is this product CE-marked under the CRA?", and the answer differs depending on which distribution they are receiving. Honest documentation makes the distinction; misleading documentation triggers contract renegotiation late in a sales cycle.
 
@@ -707,6 +707,7 @@ Sparkplug B (when enabled) coexists with vanilla FactoryMind topics via the `spB
 Three deployment topologies are supported. Each carries a different security, latency, and operational-cost profile; the customer chooses based on their requirements.
 
 **Topology A — Single-tenant on-premise (Tier 2 customer's own hardware).**
+
 - All four backend tiers (broker, backend, Influx, Postgres, Grafana) run on a single industrial mini-PC in the customer's OT armadio.
 - TLS terminates at nginx on the same box (or at the customer's existing reverse proxy).
 - Backups: daily `pg_dump` + `influx backup` to a USB drive in the customer's office, weekly to off-site (customer's choice — Aruba Cloud, Microsoft OneDrive, Google Drive).
@@ -714,6 +715,7 @@ Three deployment topologies are supported. Each carries a different security, la
 - Recommended for: customers with strict OT/IT segmentation, no public internet in the production network, regulatory preference for on-premise data.
 
 **Topology B — Hybrid (broker + edge gateway on-prem; Influx, Postgres, Grafana, backend in EU cloud).**
+
 - Mosquitto broker + edge gateway (OPC UA / Modbus / Sparkplug bridges) at customer's premises.
 - Bridge to a cloud broker (Mosquitto on Aruba Cloud Milano, EMQX Cloud, or AWS IoT Core in eu-south-1).
 - Backend, Influx, Postgres, Grafana in EU cloud (Aruba Milano, OVHcloud Milano, AWS eu-south-1).
@@ -721,6 +723,7 @@ Three deployment topologies are supported. Each carries a different security, la
 - Recommended for: customers who want centralised analytics + multi-shift access without the operational burden of on-prem hosting.
 
 **Topology C — Multi-tenant SaaS (Tier 4 FactoryMind Cloud).**
+
 - EMQX cluster (3+ nodes) in eu-south-1.
 - InfluxDB Cloud Dedicated in eu-central-1 OR self-managed InfluxDB OSS multi-bucket.
 - Aurora PostgreSQL Serverless v2 with row-level security per tenant.
@@ -1053,6 +1056,7 @@ Sign-off: each checkpoint initialled by the verifier in the deployment-log runbo
 Routine cadence: quarterly. Triggers for immediate rotation: suspected compromise, employee departure with secrets access, security audit finding requiring rotation.
 
 **JWT secret rotation**:
+
 1. Generate new secret: `openssl rand -base64 48`.
 2. Update Secrets Manager: `aws secretsmanager update-secret --secret-id factorymind/prod --secret-string '{"JWT_SECRET":"<new>",...}'`.
 3. Restart backend pods: `kubectl rollout restart deployment factorymind-backend`.
@@ -1060,6 +1064,7 @@ Routine cadence: quarterly. Triggers for immediate rotation: suspected compromis
 5. Customer impact: users see a 401 within ≤ 15 min of rotation (next API call after cached access token expires); they re-login. Communicate proactively via in-app banner.
 
 **MQTT password rotation**:
+
 1. Generate new password.
 2. Update `mosquitto_passwd -b passwd backend <new-password>`.
 3. Reload broker: `mosquitto_passwd -U` (or restart container).
@@ -1067,6 +1072,7 @@ Routine cadence: quarterly. Triggers for immediate rotation: suspected compromis
 5. Edge gateways automatically reconnect with the new credentials (they read from their local Secrets Manager mirror or env file).
 
 **Influx token rotation**:
+
 1. Create new token in Influx with same permissions: `influx auth create --user factorymind-backend --read-bucket factory-telemetry --write-bucket factory-telemetry`.
 2. Update Secrets Manager.
 3. Restart backend pods.
@@ -1141,6 +1147,7 @@ The machine-readable canonical spec is `docs/openapi.yaml`. This section is the 
 The `trace_id` is the W3C `traceparent` header value; reporting an issue with the trace_id allows correlation to the backend's OpenTelemetry trace.
 
 **Rate limits**:
+
 - Global `/api/*`: 60 req/min/IP.
 - `POST /api/users/login`: 10 req/min/IP (defence-in-depth alongside lockout).
 - `GET /api/users/me/gdpr-export`, `DELETE /api/users/me`: 10 req/h/user (GDPR-specific).
@@ -1315,6 +1322,7 @@ The 13-month audit-log retention is the default per Provv. Garante 27 novembre 2
 DPA § 7 (`legal/DATA-PROCESSING-AGREEMENT.md`) requires the Responsabile (Renan) to notify the Titolare (Customer) within **24 hours** of becoming aware of a breach (tighter than GDPR's 72 h to Garante; gives the Titolare investigative margin).
 
 Notification content (per Art. 33 par. 3):
+
 1. Nature of the breach.
 2. Categories and approximate count of data subjects affected.
 3. Categories and approximate count of records affected.
@@ -1364,17 +1372,20 @@ Error-budget policy: Green (< 25 % spent) → ship freely; Yellow (25–75 %) �
 Each runbook below follows the canonical structure: **Symptom → Diagnosis → Mitigation → Escalation → Postmortem template**.
 
 <a id="h-runbook-factorymindapidown"></a>
+
 ### 8.3 Runbook — `FactoryMindAPIDown`
 
 **Symptom.** `up{job="factorymind-backend"} == 0` for 2 minutes. The backend's `/metrics` endpoint is unreachable from Prometheus. Pages on-call.
 
 **Diagnosis.**
+
 1. `kubectl get pods -n factorymind` — are the pods running?
 2. If running: `kubectl logs -n factorymind deploy/factorymind-backend --tail=200` — last log lines, look for crash patterns.
 3. If pods are crash-looping: check `kubectl describe pod` for the failure reason (OOM? config error? image pull?).
 4. If pods look healthy but `/metrics` is unreachable: check ingress / service routing.
 
 **Mitigation.**
+
 - OOM: `kubectl rollout restart deployment factorymind-backend`; if recurring, increase `limits.memory` (HPA + ticket for diagnosis).
 - Config error: revert the last config-related deploy; verify with the deployment-log runbook.
 - Image pull error: check GHCR connectivity; check image tag exists; check imagePullSecrets if using private registry.
@@ -1385,17 +1396,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Postmortem.** Within 5 working days. Template at § 8.PM.
 
 <a id="h-runbook-factorymindhigherrorrate"></a>
+
 ### 8.4 Runbook — `FactoryMindHighErrorRate`
 
 **Symptom.** 5xx rate > 1 % over 10 minutes. SLO-1 budget burning.
 
 **Diagnosis.**
+
 1. Grafana "Errors" dashboard → which routes are returning 5xx?
 2. Pino logs filtered by `level=error AND service=factorymind-backend`.
 3. Recent deploy correlation: any deploy in the last 30 min?
 4. Dependency check: PG / Influx / MQTT — are they healthy? `/api/health` envelope.
 
 **Mitigation.**
+
 - Recent-deploy regression: `kubectl rollout undo deployment factorymind-backend`. Verify error rate drops within 5 min.
 - DB issue: check Aurora dashboard; failover if primary instance is degraded.
 - Influx issue: check Influx server load; influx writer buffer should absorb transients.
@@ -1405,17 +1419,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Postmortem.** Required if budget burn > 5 %.
 
 <a id="h-runbook-factorymindlatencyburn"></a>
+
 ### 8.5 Runbook — `FactoryMindLatencyBurn`
 
 **Symptom.** P95 latency > 500 ms over 15 minutes. SLO-2 budget burning.
 
 **Diagnosis.**
+
 1. Grafana "API performance" dashboard → which routes?
 2. PG slow-query log (`auto_explain` enabled).
 3. Influx query duration (Grafana panel `factorymind_influx_query_duration_seconds`).
 4. Heap pressure correlation (Node.js GC pauses).
 
 **Mitigation.**
+
 - Slow PG query: add index, or rewrite query; emergency `EXPLAIN ANALYZE` and apply hint.
 - Influx slow: cardinality issue (REMEDIATION R-INFLUX-CARDINALITY-AUDIT-001 covers continuous monitoring).
 - Heap GC: scale horizontally (HPA), or restart pods.
@@ -1423,17 +1440,20 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Escalation.** Ticket; pager only if SLO budget Red.
 
 <a id="h-runbook-factorymindmqttdisconnected"></a>
+
 ### 8.6 Runbook — `FactoryMindMQTTDisconnected`
 
 **Symptom.** Backend `factorymind_mqtt_connected == 0` for 1 minute. Pages immediately because telemetry ingestion is paused.
 
 **Diagnosis.**
+
 1. Broker reachability: `mosquitto_sub -h <broker> -p 8883 -u <user> -P <pass> -t '$SYS/#' -W 5` — does the broker answer?
 2. Backend logs: `level=warn AND component=mqtt-handler` — last connect attempt, last error.
 3. Edge gateways: are they buffering (90-s store-and-forward)? Local Mosquitto status on each.
 4. Network: any firewall change? DNS resolution OK?
 
 **Mitigation.**
+
 - Broker down: `kubectl rollout restart statefulset mosquitto` (or restart container at the customer). Backend reconnects automatically with exponential backoff.
 - Auth failure (e.g., after credential rotation that the backend hasn't picked up): restart backend pods so they read updated Secrets Manager.
 - Network: coordinate with customer's IT.
@@ -1441,20 +1461,24 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Escalation.** If telemetry remains paused > 10 min: customer notice. Edge buffer covers ≈ 90 s; beyond that data loss is likely (telemetry is QoS 0, alarms are QoS 1 — the latter recover, the former are gone).
 
 <a id="h-runbook-factorymindinfluxwritefailures"></a>
+
 ### 8.7 Runbook — `FactoryMindInfluxWriteFailures`
 
 **Symptom.** Write-failure ratio > 0.1 % over 10 minutes. SLO-7 budget burning.
 
 **Diagnosis.**
+
 1. Influx server health.
 2. Buffer status: `factorymind_influx_buffer_size` — is the buffer full?
 3. Cardinality: `influx query 'cardinality(...)'` — has cardinality grown unexpectedly?
 
 **Mitigation.**
+
 - Influx server: check disk, restart if needed.
 - Cardinality blow-up: identify the misbehaving topic (typically a misconfigured device dumping high-entropy tag values); pause its ingestion via ACL.
 
 <a id="h-runbook-factorymindheappressure"></a>
+
 ### 8.8 Runbook — `FactoryMindHeapPressure`
 
 **Symptom.** Heap usage > 80 % of `--max-old-space-size` for 10 min.
@@ -1464,6 +1488,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Mitigation.** Pod restart relieves. Persistent root cause requires code fix.
 
 <a id="h-runbook-factorymindreadinessflap"></a>
+
 ### 8.9 Runbook — `FactoryMindReadinessFlap`
 
 **Symptom.** `/api/ready` flaps between 200 and 5xx > 6 times in 15 min.
@@ -1473,6 +1498,7 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Mitigation.** Address the flapping dependency; readiness-probe timeout tuning if appropriate.
 
 <a id="h-runbook-factorymindloginanomalies"></a>
+
 ### 8.10 Runbook — `FactoryMindLoginAnomalies`
 
 **Symptom.** > 10 failed logins per second.
@@ -1482,6 +1508,146 @@ Each runbook below follows the canonical structure: **Symptom → Diagnosis → 
 **Mitigation.** If single-source: WAF block the IP. If distributed: temporarily increase lockout threshold + monitor; consider customer notice (could be a coordinated attack).
 
 This is a security event: file a security incident even if fully mitigated, for trend analysis.
+
+### 8.11 Runbook — Disaster Recovery (region failover)
+
+**Closes** R-RUNBOOK-DR-001 (REMEDIATION § 6); pairs with R-DR-DRILL-001 (quarterly drill cadence in § 8 of REMEDIATION).
+
+**Scope.** Loss of the primary AWS region (eu-south-1, Milan) due to extended outage, regional control-plane failure, or accidental destructive change. Failover target is eu-central-1 (Frankfurt) — the second region in the same EU data-residency boundary that the GDPR / NIS2 commitment depends on.
+
+**Pre-conditions.** Before this runbook can execute end-to-end:
+
+- RDS Aurora cross-region read-replica in eu-central-1 (`terraform/modules/db/rds.tf`; the secondary cluster's `source_region` is the primary).
+- InfluxDB Cloud sub-region replication enabled (vendor feature; verified in TIA — `legal/TIA-INFLUXDATA.md` § 3.2).
+- Latest object backup of `s3://factorymind-state-prod` replicated to eu-central-1 via cross-region replication rule (Terraform `aws_s3_bucket_replication_configuration`).
+- Route 53 hosted zone with health-checked failover record for `api.factorymind.it` pointing at the regional ALB.
+- Operator has `AdministratorAccess` on the AWS account and `roles/dba` on RDS.
+- `kubectl` context for the `factorymind-failover` cluster in eu-central-1 (provisioned via Terraform `eks-failover` workspace).
+
+If any pre-condition is missing this runbook is **not executable** — fix the gap before the next drill rather than during a real incident.
+
+**Decision tree (5 minutes max).**
+
+1. **Is the primary cluster reachable at all?** `kubectl get nodes` against the eu-south-1 context. If it returns nodes (even if they are NotReady) the issue is likely intra-cluster, not regional — engage the appropriate § 8.3-8.10 runbook instead.
+2. **Is the AWS regional control plane reporting issues?** Check `https://health.aws.amazon.com/health/status` for eu-south-1. If the region itself is degraded, the failover decision is forced.
+3. **Is the data-loss window acceptable?** Aurora replication lag is typically < 5 s; in catastrophic primary failure the replica may be up to 60 s behind. Document the observed lag at the moment of failover (`SELECT * FROM aurora_global_db_status();` on the replica, or CloudWatch metric `AuroraGlobalDBReplicationLag`). Customer Success communicates the data-loss window to affected customers in the breach-notice template (§ 7).
+
+**Failover procedure.**
+
+1. **Promote the Aurora replica.**
+
+   ```bash
+   aws rds failover-global-cluster \
+     --global-cluster-identifier factorymind-prod-global \
+     --target-db-cluster-identifier arn:aws:rds:eu-central-1:<account>:cluster:factorymind-prod-eu-central-1 \
+     --region eu-central-1
+   ```
+
+   The promotion is asynchronous; expect 1-3 minutes for the cluster to accept writes. Monitor with:
+
+   ```bash
+   aws rds describe-global-clusters \
+     --global-cluster-identifier factorymind-prod-global \
+     --query 'GlobalClusters[0].GlobalClusterMembers[*].{Cluster:DBClusterArn,IsWriter:IsWriter}'
+   ```
+
+2. **Switch InfluxDB Cloud writes to the eu-central-1 endpoint.**
+
+   The failover endpoint is in the runtime config under `INFLUX_URL_FAILOVER`. Apply via Helm value override:
+
+   ```bash
+   helm upgrade factorymind-backend ./charts/factorymind-backend \
+     --namespace factorymind \
+     --kube-context factorymind-failover \
+     --set env.INFLUX_URL=$INFLUX_URL_FAILOVER \
+     --set env.INFLUX_TOKEN=$INFLUX_TOKEN_FAILOVER \
+     --reuse-values
+   ```
+
+3. **Update the Route 53 failover record.**
+
+   The `api.factorymind.it` record is configured with health-checked failover; in the normal case it flips automatically when the primary ALB health-check fails for ≥ 3 consecutive samples (90 s window). Manual cutover, if needed:
+
+   ```bash
+   aws route53 change-resource-record-sets \
+     --hosted-zone-id <ZONE_ID> \
+     --change-batch file://dr/route53-failover-cutover.json
+   ```
+
+   The change-batch JSON is checked in at `infrastructure/dr/route53-failover-cutover.json` (target state — file currently exists as a template; populate with real ARNs during the first drill).
+
+4. **Restore from backup if the replica diverged.**
+
+   If `aurora_global_db_status()` shows replication broken for > 60 s prior to incident, the replica may have lost late writes. Restore from PITR snapshot:
+
+   ```bash
+   aws rds restore-db-cluster-to-point-in-time \
+     --source-db-cluster-identifier factorymind-prod-eu-south-1 \
+     --db-cluster-identifier factorymind-prod-eu-central-1-restored \
+     --restore-to-time <ISO-8601> \
+     --use-latest-restorable-time \
+     --region eu-central-1
+   ```
+
+   For InfluxDB Cloud, contact InfluxData support via the dedicated breach line (number in `legal/TIA-INFLUXDATA.md` § 5.4) — the cross-region replica is async and may be up to 1 hour behind in worst case; a coordinated restore from their side may be required.
+
+**Verification checklist.**
+
+- [ ] `https://api.factorymind.it/api/health` returns 200 with all `dependencies.{postgres,influxdb,influxdb_tasks,mosquitto}.ok = true` (R-INFLUX-TASK-001 closure).
+- [ ] `https://api.factorymind.it/api/ready` returns 200 (all dependencies primed at least once).
+- [ ] `SELECT count(*) FROM attestazioni WHERE emessa_il > NOW() - INTERVAL '24 hours'` matches the pre-failover count within the documented data-loss window (Aurora replication lag).
+- [ ] Synthetic OEE for the canonical test fixture machine matches pre-failover value within 0.1 % (R-DR-DRILL-001 exit criterion).
+- [ ] `cosign verify --certificate-identity-regexp '.*github.com/factorymind.*' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' ghcr.io/factorymind/factorymind-backend@sha256:<digest>` succeeds against the digest deployed in eu-central-1 (image-signing chain integrity).
+- [ ] Active customer logins continue to work (cookie session domain matches `factorymind.it`, not region-specific subdomain).
+- [ ] Grafana dashboards re-pair against the failover Influx endpoint (one click in the data-source settings if not pre-provisioned).
+- [ ] Customer Success has sent the GDPR Art. 33 / NIS2 § 7 incident notice if the data-loss window exceeds the contractual SLA (see § 7).
+
+**Rollback (if failover proves unnecessary).**
+
+If the primary region recovers and the failover was precautionary, the rollback path is the inverse of the failover but requires:
+
+- Quiescing writes on the eu-central-1 cluster (read-only mode).
+- Replicating any new rows back to eu-south-1 via `pg_dump` + `pg_restore` of the affected tables.
+- Flipping Route 53 back to primary.
+- A second incident notice to customers if data was written during the failover that needs to migrate back.
+
+This is materially harder than the failover itself; the default disposition is to **stay in the failover region** until the next planned maintenance window allows a coordinated migration back. Doctrine: failover is a one-way door under load; the rollback decision should be deliberate, not reflexive.
+
+**Doctrine references.** R-7 (wave drift sign-off — a DR event triggers a post-incident wave assessment), H-22 (quarterly review — DR runbook freshness), A-12 (doctrine review cadence applies to this runbook).
+
+### 8.12 Observability — OTel sampling per tier
+
+**Closes** R-OTEL-SAMPLING-DOC-001 (REMEDIATION § 7).
+
+The backend exports OpenTelemetry traces via `OTEL_EXPORTER_OTLP_ENDPOINT` (set in compose / k8s configmap). Trace volume scales linearly with request volume; without sampling, Tier 4 SaaS deployments exceed the budget of any reasonable OTel collector well before they exceed FactoryMind's own ingestion budget.
+
+The recommended `OTEL_TRACES_SAMPLER_ARG` per deployment tier:
+
+| Tier | Customer profile | Estimated req/s | Recommended sampler arg | Effective trace rate |
+|---|---|---|---|---|
+| 1 | Self-hosted, single facility | < 50 | `1.0` (sample all) | 100 % |
+| 2 | Single-tenant SaaS, ≤ 200 machines | 50 – 500 | `0.5` | 50 % |
+| 3 | Single-tenant SaaS, ≤ 1000 machines | 500 – 2 000 | `0.2` | 20 % |
+| 4 | Multi-tenant SaaS, > 1 000 machines | > 2 000 | `0.05` | 5 % |
+
+The sampler is `parentbased_traceidratio` (Vite + backend share the same trace ID once frontend OTel ships); the ratio applies only when no parent context is present. Error-class spans are always sampled (head-based sampling decision is overridden by `RecordException`).
+
+To override the default for an incident or capacity test:
+
+```bash
+# In compose
+OTEL_TRACES_SAMPLER_ARG=1.0 docker compose up factorymind-backend
+```
+
+```yaml
+# In k8s/configmap.yaml (live edit + rolling restart)
+data:
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+```
+
+The configmap value is consumed by `backend/src/otel.js` (initialised before any other module to ensure auto-instrumentation hooks attach correctly).
+
+**Doctrine reference.** A-12 (cadence review): the per-tier table is reviewed quarterly when actual req/s histograms diverge from the estimates above.
 
 ### 8.PM — Postmortem template
 
@@ -1639,6 +1805,7 @@ At v1.0, Renan is the sole maintainer. Doctrine **H-5** requires bus factor ≥ 
 ### 12.2 Onboarding checklist for the first new engineer
 
 **Week 1 (reading + bootstrap):**
+
 - [ ] Read `HANDOFF.md` § 0–4 (cold-reader path).
 - [ ] Run `./install.sh` on a clean Ubuntu / macOS box. Reach the dashboard.
 - [ ] Read `AUDIT.md` § 4 (security findings) — understand the open risks.
@@ -1646,12 +1813,14 @@ At v1.0, Renan is the sole maintainer. Doctrine **H-5** requires bus factor ≥ 
 - [ ] First non-trivial commit: pick a Low-severity REMEDIATION ticket and ship it.
 
 **Week 2 (deeper dive):**
+
 - [ ] Read `HANDOFF.md` § 5–9.
 - [ ] Read `REMEDIATION.md` end-to-end. Pick a Medium ticket; pair with Renan on it.
 - [ ] Read `legal/` end-to-end (in Italian — bilingual reading is part of the role).
 - [ ] First customer-facing piece: shadow a customer support call.
 
 **End of Week 2 sign-off:**
+
 - The engineer can answer: where is the OEE math? what does install.sh do in unattended mode? what is the broker hardening posture in production? what is the GDPR breach-notification path?
 - If yes — pass; the engineer is added as a second owner to ≥ 3 modules in § 4.
 - If not — extend to Week 3 with focused study; revisit sign-off.
@@ -1795,4 +1964,3 @@ Stable file:line pointers used by [`AUDIT.md`](AUDIT.md), [`REMEDIATION.md`](REM
 ---
 
 **Made in Mozzecane (VR) — Veneto, Italy.**
-

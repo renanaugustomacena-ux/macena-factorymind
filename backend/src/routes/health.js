@@ -19,16 +19,25 @@ const router = Router();
 const STARTED_AT = Date.now();
 
 router.get('/', async (_req, res) => {
-  const [pgState, influxState] = await Promise.all([pg.ping(), influx.ping()]);
+  // R-INFLUX-TASK-001: live tasksHealth() query — returns ok=false if any of
+  // the three canonical downsampling tasks is missing (deleted at runtime,
+  // never created, etc). Live not cached: a task deleted in InfluxDB UI
+  // surfaces on the next health hit.
+  const [pgState, influxState, influxTasksState] = await Promise.all([
+    pg.ping(),
+    influx.ping(),
+    influx.tasksHealth()
+  ]);
   const mqttState = mqtt.ping();
 
   const dependencies = {
     postgres: pgState,
     influxdb: influxState,
+    influxdb_tasks: influxTasksState,
     mosquitto: mqttState
   };
 
-  const allOk = pgState.ok && influxState.ok && mqttState.ok;
+  const allOk = pgState.ok && influxState.ok && influxTasksState.ok && mqttState.ok;
 
   res.status(allOk ? 200 : 503).json({
     status: allOk ? 'ok' : 'degraded',

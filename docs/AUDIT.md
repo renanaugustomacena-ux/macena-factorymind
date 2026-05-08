@@ -111,6 +111,7 @@ L'auditor rilascia il presente documento con la consapevolezza che esso è **fir
 The following twenty rules bind every audit pass — this v1.0 baseline and every subsequent quarterly refresh per HANDOFF doctrine **H-22**.
 
 <a id="a-doctrine-evidence"></a>
+
 ### Rule A-1 — No finding without evidence.
 
 A finding is the assertion that something is wrong. The assertion is gossip until it carries primary-source evidence.
@@ -132,6 +133,7 @@ Every Critical and High finding carries an 8-vector CVSS 3.1 worksheet entry in 
 **Cross-refs.** Appendix B.
 
 <a id="a-bola-surface"></a>
+
 ### Rule A-3 — Severity classes are publishable to the customer.
 
 Critical / High / Medium / Low map to one-line lay-readable explanations. The customer's commercialista reads severity, not CVSS.
@@ -163,6 +165,7 @@ Every F-CRIT and F-HIGH security finding carries at least one MITRE ATT&CK for I
 **Cross-refs.** § 4 examples.
 
 <a id="a-doctrine-citation"></a>
+
 ### Rule A-6 — No invented decree numbers, CVE IDs, or article numbers.
 
 Every cite traces to HANDOFF Appendix A. If the auditor is unsure, the finding is marked `[VERIFY]` and the closest authoritative source is linked.
@@ -244,6 +247,7 @@ Severity ≠ effort. A 9.1 CVSS that requires ring-zero access is less urgent th
 **Cross-refs.** § 8.
 
 <a id="a-doctrine-bilingual"></a>
+
 ### Rule A-14 — Italian regulator language is preserved.
 
 Decree citations stay in Italian; the surrounding paragraph is in the section's register; the prima-facie quote is italicised.
@@ -664,7 +668,7 @@ image: ghcr.io/factorymind/factorymind-backend:1.0.0
 
 ### F-MED-DATA-001 — InfluxDB downsampling task creation success not verified at startup.
 
-**Severity:** Medium (CVSS 4.5). **Category:** Data integrity. 
+**Severity:** Medium (CVSS 4.5). **Category:** Data integrity.
 
 **Evidence.** `backend/src/services/influx-writer.js:bootstrapTasks()` creates the three downsampling tasks (`downsample_1m`, `downsample_1h`, `downsample_1d`) at startup; if creation fails (e.g., transient Influx unavailability, permission error), the writer proceeds with telemetry ingestion but downsampling never happens. The 30-day raw-bucket retention then deletes data before it has been downsampled to 1m/1h/1d retention.
 
@@ -895,6 +899,7 @@ Hard-coded; the dashboard's `index.html` is the same.
 **Remediation:** [`REMEDIATION.md`](REMEDIATION.md#r-ticket-r-nis2-scope-001) (R-NIS2-SCOPE-001) — legal counsel review; document the conclusion + supporting reasoning.
 
 <a id="a-cra-applicability"></a>
+
 ### F-MED-LEGAL-004 — CRA applicability analysis open.
 
 **Severity:** Medium. **Category:** Cyber Resilience Act (Reg. UE 2024/2847).
@@ -1229,6 +1234,7 @@ The "Alto" level requires independent penetration testing and a formal incident-
 ---
 
 <a id="a-strength-migrations"></a>
+
 ## 11. Strengths (do-not-regress list)
 
 These properties of the platform are working well; the remediation phase MUST NOT inadvertently break them. Each strength carries a short rationale and the regression-test that defends it.
@@ -1250,6 +1256,7 @@ These properties of the platform are working well; the remediation phase MUST NO
 **Regression test.** CMD-023 (Appendix A) — a tenant-A user attempts to subscribe to tenant-B topics and is denied.
 
 <a id="a-strength-config-guardrail"></a>
+
 ### 11.3 Backend production guardrails
 
 **Property.** `backend/src/config/index.js:113-145` runs after Joi schema validation and refuses boot on: `JWT_SECRET` placeholder; `JWT_SECRET` < 32 chars; `MQTT_BROKER_URL` not `mqtts://`; CORS contains `*` or `localhost`; `INFLUX_TOKEN` < 32 chars.
@@ -1697,6 +1704,7 @@ This appendix records, for every scoring decision in § 10, the file:line eviden
 ### NIST CSF 2.0 — Protect function (score 2)
 
 Evidence per control family:
+
 - **Access control (PR.AC):** RBAC at app + ACL at broker + RLS-ready Postgres schema.
 - **Awareness & training (PR.AT):** doctrines in all four documents; HANDOFF § 12 onboarding checklist.
 - **Data security (PR.DS):** TLS 1.3, KMS at-rest, scrypt password hashing.
@@ -1873,7 +1881,7 @@ This appendix maps every F-* finding to the OWASP API Top 10 (2023), OWASP IoT T
 | F-HIGH-009 | API8 | n/a | T1195 | supply chain |
 | F-HIGH-010 | API2 | n/a | T1078 | WS auth |
 
-(Continued for F-MED-* and F-LOW-* findings in the production document.)
+(Continued for F-MED-*and F-LOW-* findings in the production document.)
 
 ---
 

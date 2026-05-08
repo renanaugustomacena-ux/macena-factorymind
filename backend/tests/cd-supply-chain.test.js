@@ -38,9 +38,11 @@ describe('CD supply chain — Cosign + digest pinning (R-SUPPLY-001 + R-K8S-DIGE
   });
 
   it('every build-push-action has an id (so digest is referenceable)', () => {
-    // Simple grep: each docker/build-push-action@v6 block must carry an `id:`.
+    // Each docker/build-push-action block must carry an `id:`. R-CI-PIN-001
+    // pinned all uses to SHA form (`@<40-char-sha> # v6`); the regex matches
+    // any reference variant — bare tag, SHA pin, or future schemes.
     const blocks = cd.split(/^\s*-\s+name:/m);
-    const buildBlocks = blocks.filter((b) => /docker\/build-push-action@v6/.test(b));
+    const buildBlocks = blocks.filter((b) => /docker\/build-push-action@/.test(b));
     expect(buildBlocks.length).toBeGreaterThanOrEqual(3);
     for (const b of buildBlocks) {
       expect(b).toMatch(/^\s*id:\s+\S+/m);

@@ -1,9 +1,16 @@
 {
   "app": {
     "title": "FactoryMind",
-    "tagline": "Produktion in Echtzeit überwachen",
+    "tagline": "Produktionsüberwachung in Echtzeit",
     "loading": "Wird geladen...",
-    "error": "Ein Fehler ist aufgetreten"
+    "error": "Ein unerwarteter Fehler ist aufgetreten",
+    "error_boundary": {
+      "heading": "Die Seite kann nicht angezeigt werden",
+      "body": "Die Produktionsdaten sind sicher. Sie können es erneut versuchen oder den Browser neu laden.",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden"
+    },
+    "version": "Version"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -15,16 +22,23 @@
     "logout": "Abmelden"
   },
   "dashboard": {
-    "title": "Werksübersicht",
+    "title": "Produktionsübersicht",
+    "subtitle_facility": "Werk {{facility}}",
+    "subtitle_machines": "{{count}} angeschlossene Maschinen",
     "oee": {
       "label": "OEE (Gesamtanlageneffektivität)",
       "availability": "Verfügbarkeit",
+      "availability_hint": "Betriebszeit im Verhältnis zur geplanten Zeit",
       "performance": "Leistung",
+      "performance_hint": "Tatsächliche Zykluszeit im Verhältnis zur Nennzeit",
       "quality": "Qualität",
+      "quality_hint": "Gute Teile im Verhältnis zur Gesamtproduktion",
       "world_class": "Weltklasse (>= 85%)",
-      "above_target": "Über Ziel",
+      "above_average": "Über dem Branchendurchschnitt",
+      "average": "Im Branchendurchschnitt",
       "below_target": "Unter Ziel",
-      "insufficient_data": "Unzureichende Daten"
+      "zero_production": "Keine Produktion im Zeitraum",
+      "insufficient_data": "Unzureichende Daten zur OEE-Berechnung"
     },
     "production": {
       "good": "Gute Teile",
@@ -33,16 +47,21 @@
       "cycle_time": "Mittlere Zykluszeit (s)",
       "shift": "Schicht",
       "target": "Ziel"
-    }
+    },
+    "machines_heading": "Maschinenstatus",
+    "alerts_heading": "Offene Alarme"
   },
   "machines": {
     "title": "Maschinenkonfiguration",
+    "subtitle": "Stammdaten und Prozessparameter der Maschinen des Werks.",
     "table": {
       "name": "Name",
       "vendor": "Hersteller",
       "model": "Modell",
       "protocol": "Protokoll",
       "status": "Status",
+      "cycle_time_ideal": "Ideale Zykluszeit (s)",
+      "ideal_output": "Nennstundenleistung",
       "actions": "Aktionen"
     },
     "status": {
@@ -54,11 +73,15 @@
     "actions": {
       "edit": "Bearbeiten",
       "delete": "Löschen",
-      "attestazione_piano4": "Piano 4.0 Bescheinigung erstellen"
-    }
+      "attestazione_piano4": "Piano 4.0/5.0 Bescheinigung erstellen",
+      "details": "Maschinendetails"
+    },
+    "last_update": "Letzte Aktualisierung",
+    "empty": "Keine Maschinen registriert. Kontaktieren Sie den Support."
   },
   "alerts": {
     "title": "Aktive Alarme",
+    "subtitle": "Vom System erkannte kritische Ereignisse, die eine Bedienerprüfung erfordern.",
     "severity": {
       "warning": "Warnung",
       "major": "Schwerwiegend",
@@ -71,18 +94,26 @@
     },
     "actions": {
       "acknowledge": "Bestätigen",
-      "resolve": "Beheben"
+      "resolve": "Als behoben markieren"
     },
-    "empty": "Keine aktiven Alarme"
+    "empty": "Keine aktiven Alarme. Produktion läuft normal."
   },
   "reports": {
-    "title": "Produktionsberichte",
+    "title": "Berichte und Bescheinigungen",
+    "subtitle": "Schichtberichte, OEE-Verlauf und Pareto-Analyse der Stillstände. Auch als Piano 4.0/5.0 Bescheinigung für den Steuerberater exportierbar.",
+    "shift_current": "Aktuelle Schicht",
+    "downtime_chart": {
+      "heading": "Pareto-Diagramm der Maschinenstillstände",
+      "loading": "Daten werden geladen...",
+      "error": "Stillstandsdaten sind derzeit nicht verfügbar.",
+      "window_note": "Beobachtetes Fenster: letzte 24 Stunden. Gesamtstillstand: {{minutes}} Min über {{events}} Ereignisse."
+    },
     "period": {
       "today": "Heute",
-      "week": "Woche",
-      "month": "Monat",
-      "quarter": "Quartal",
-      "custom": "Benutzerdefiniert"
+      "week": "Diese Woche",
+      "month": "Dieser Monat",
+      "quarter": "Dieses Quartal",
+      "custom": "Benutzerdefinierter Zeitraum"
     },
     "export": "Exportieren",
     "export_formats": {
@@ -93,20 +124,27 @@
   },
   "auth": {
     "login": {
-      "title": "Anmelden",
-      "email": "E-Mail-Adresse",
+      "title": "Anmeldung am Dashboard",
+      "email": "Geschäftliche E-Mail-Adresse",
       "password": "Passwort",
       "submit": "Anmelden",
       "forgot": "Passwort vergessen?",
       "invalid_credentials": "Ungültige Anmeldedaten",
-      "account_locked": "Konto vorübergehend gesperrt. Bitte später erneut versuchen.",
-      "too_many_attempts": "Zu viele Versuche. Bitte warten und erneut versuchen."
+      "account_locked": "Zugang gesperrt nach zu vielen Versuchen. In ein paar Minuten erneut versuchen.",
+      "too_many_attempts": "Zu viele Versuche in kurzer Zeit. Bitte warten und erneut versuchen."
     },
     "password_policy": {
-      "min_length": "Passwort muss mindestens 12 Zeichen lang sein",
+      "min_length": "Passwort muss mindestens 12 Zeichen lang sein.",
       "breached": "Dieses Passwort kommt in bekannten Leaks vor. Bitte wählen Sie ein anderes.",
-      "weak": "Passwort zu schwach"
+      "weak": "Passwort ist nicht stark genug.",
+      "hibp_unavailable": "Passwort-Prüfdienst nicht verfügbar. Bitte gleich erneut versuchen."
     }
+  },
+  "connection": {
+    "mqtt_connected": "MQTT-Kanal aktiv",
+    "mqtt_disconnected": "MQTT-Kanal unterbrochen. Reconnect läuft...",
+    "api_unreachable": "Backend nicht erreichbar. Firmennetzwerk prüfen.",
+    "connecting": "Verbindung wird aufgebaut..."
   },
   "common": {
     "save": "Speichern",
@@ -116,11 +154,21 @@
     "no": "Nein",
     "refresh": "Aktualisieren",
     "search": "Suche",
-    "filter": "Filter"
+    "filter": "Filter",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "download": "Herunterladen",
+    "back": "Zurück",
+    "next": "Weiter"
   },
-  "connection": {
-    "mqtt_connected": "MQTT verbunden",
-    "mqtt_disconnected": "MQTT getrennt - Reconnect läuft",
-    "api_unreachable": "Backend nicht erreichbar"
+  "attestazione": {
+    "title": "Piano 4.0/5.0 Bescheinigung",
+    "generate": "Bescheinigung als PDF erstellen",
+    "preview": "Datenvorschau",
+    "verify": "Bescheinigung prüfen",
+    "revoke": "Bescheinigung widerrufen",
+    "eligible": "Maschine zur Steuergutschrift zugelassen",
+    "not_eligible": "Maschine nicht zugelassen: Anforderungen nicht erfüllt",
+    "disclaimer": "Technisches Dokument. Die steuerliche Verantwortung bleibt beim Inhaber und seinem Steuerberater."
   }
 }
