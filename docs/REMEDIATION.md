@@ -1300,6 +1300,20 @@ Each ticket below uses the canonical schema:
 - **Effort:** L.
 - **Status:** Pending.
 
+### R-ECS-CMK-001 — Wire customer-managed KMS key into ECS cluster encryption config.
+
+- **Findings closed:** Trivy AWS-0079 (HIGH) — `Cluster does not specify a customer managed key for storage encryption`.
+- **Wave:** W3.
+- **Owner:** DevOps.
+- **Severity gate:** Medium (proactive — current deployments do not enable `execute_command`).
+- **Exit criteria:**
+  - `aws_ecs_cluster.app` (`terraform/main.tf:113`) and `aws_ecs_cluster.this` (`terraform/modules/k8s/main.tf:36`) gain `configuration { execute_command_configuration { kms_key_id = aws_kms_key.factorymind.arn, logging = "OVERRIDE", log_configuration { ... cloud_watch_encryption_enabled = true } } }`.
+  - `.trivyignore` AWS-0079 entry removed (or scoped to specific clusters that legitimately don't need it).
+  - `terraform validate` clean; the existing R-RDS-KMS-001 KMS key (`aws_kms_key.factorymind`) referenced — no new key resource.
+- **Effort:** S.
+- **Background:** PR #1 (W2/W3 sweep, 2026-05-08) discovered Trivy was failing on AWS-0079. The clusters at v1.0 do not enable `execute_command` (no task definitions carry `enable_execute_command = true`), so the encryption gap has no current data-at-rest exposure — but Tier 4 SaaS troubleshooting WILL want execute_command, and wiring the KMS reference proactively closes the gap before the ops need surfaces. Allowlisted in `.trivyignore` with this ticket ID as the unblock condition.
+- **Status:** Pending.
+
 ### R-COVERAGE-UPLIFT-001 — Ratchet backend Jest coverage thresholds back to 60% / 60% / 60% / 60%.
 
 - **Findings closed:** doctrine **R-3** (no `|| true` masking — coverage gate must be honest).

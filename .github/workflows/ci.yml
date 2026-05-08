@@ -199,6 +199,10 @@ jobs:
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
           exit-code: "1"
+          # Per-rule allowlist with mandatory rationale lives at .trivyignore
+          # at the repo root. Doctrine R-3: each entry must justify why the
+          # finding is FP / tracked under a follow-up ticket.
+          trivyignores: ".trivyignore"
 
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2

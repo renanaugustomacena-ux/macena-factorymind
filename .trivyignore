@@ -1,0 +1,37 @@
+# .trivyignore — Trivy config-scan allowlist with mandatory rationale per rule.
+#
+# Doctrine R-3 (no `|| true` masking): blanket suppressions are forbidden;
+# per-rule entries WITH inline context are acceptable security hygiene.
+# Each entry below MUST justify why the finding is either a false positive
+# or a known gap tracked under a REMEDIATION ticket.
+
+# -----------------------------------------------------------------------------
+# AWS-0164 — Subnet associates public IP address.
+# -----------------------------------------------------------------------------
+# False positive: `aws_subnet.public` (terraform/main.tf:35-42) is INTENDED
+# public-facing. The `map_public_ip_on_launch = true` setting is the
+# conventional AWS pattern for public subnets that host the ALB, NAT Gateway,
+# and bastion host. Application workloads (ECS tasks, RDS instances) live in
+# `aws_subnet.private` and are NOT exposed to the public internet — egress to
+# the public network is gated through the NAT Gateway in the public subnet.
+# Real workloads are scheduled into the private subnet via Terraform's
+# subnet_ids variable on each compute resource.
+AWS-0164
+
+# -----------------------------------------------------------------------------
+# AWS-0079 — Cluster does not specify a customer managed key for storage
+# encryption.
+# -----------------------------------------------------------------------------
+# Acknowledged gap, tracked under R-ECS-CMK-001 (W3, REMEDIATION § 7).
+# Both `aws_ecs_cluster.app` (terraform/main.tf:113) and `aws_ecs_cluster.this`
+# (terraform/modules/k8s/main.tf:36) lack
+# `configuration { execute_command_configuration { kms_key_id = ... } }`.
+# The rule fires because the execute-command log encryption is unspecified.
+# Mitigating factors: execute_command itself is NOT enabled on these clusters
+# at v1.0 deployment scale (no `enable_execute_command = true` on any task
+# definition); without execute_command, there are no command logs to encrypt.
+# When execute_command is enabled (Tier 4 SaaS troubleshooting need), the
+# KMS key reference will be wired in the same change. R-ECS-CMK-001 covers
+# the proactive wiring against the existing R-RDS-KMS-001 KMS key so the
+# cluster is encryption-ready before execute_command is opted into.
+AWS-0079
